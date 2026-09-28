@@ -1,6 +1,6 @@
 # Sicknezz
 
-Jogo de cartas 1 vs 1 online, com o tema doenças. Funciona em tempo real, como o Clash Royale: ganhas mana a cada segundo e jogas cartas arrastando-as para o tabuleiro.
+Jogo de cartas 1 vs 1 online, com o tema doenças. Funciona em tempo real, como o Clash Royale: ganhas energia a cada segundo e jogas cartas arrastando-as para o tabuleiro.
 
 ## Como correr
 
@@ -16,7 +16,7 @@ Para produção: `npm run build` e depois `npm start`. O servidor fica em http:/
 ## Regras
 
 - 100 de vida. Perde quem chegar a 0 primeiro. Não há limite de tempo.
-- Mana: começa em 0, máximo 10, +1 a cada 1,5 segundos.
+- Energia: começa em 0, máximo 10, +1 a cada 1,5 segundos.
 - **Procurar adversário**: matchmaking automático. Conta para o ranking (pontos Elo, começa em 1000).
 - **Criar sala / código**: partida amigável com um amigo. Conta para as estatísticas, mas não para os pontos.
 - Se a ligação cair, tens 30 segundos para voltar (basta recarregar a página). Se não voltares, perdes.
@@ -34,8 +34,8 @@ Estes valores estão em [shared/engine/config.ts](shared/engine/config.ts).
 |----------------|-------------------------------------------|----------------|
 | 🦠 Vírus       | dano ao longo do tempo                    | Hospital (a Vacina só previne) |
 | 🧫 Bactéria    | dano que escala com outras doenças        | Antibiótico    |
-| 🍔 Física      | enfraquece até ser curada (mana, vida)    | Exercício      |
-| 🧠 Mental      | ataca a mana                              | Terapia        |
+| 🍔 Física      | enfraquece até ser curada (energia, vida) | Exercício      |
+| 🧠 Mental      | ataca a energia                           | Terapia        |
 | 💊 Tratamento  | cura e dá bónus a quem joga               | —              |
 
 O Hospital cura vírus e bactérias. As doenças **permanentes** (Ébola, SIDA) nenhum tratamento tira; marca-se uma carta assim com `permanent: true`.
@@ -59,8 +59,8 @@ shared/            código partilhado entre servidor e cliente
   engine/
     mechanics.ts   ← AS MECÂNICAS (os blocos com que as cartas são feitas)
     game.ts        motor: jogar carta, imunidade, tick, vitória
-    stats.ts       cálculo dos stats (mana máx., regeneração...) com modificadores
-    actions.ts     damage / heal / drainMana / countDiseases
+    stats.ts       cálculo dos stats (energia máx., regeneração...) com modificadores
+    actions.ts     damage / heal / drainEnergy / countDiseases
     config.ts      valores base
   protocol.ts      mensagens cliente <-> servidor
 server/
@@ -88,11 +88,11 @@ sarampo: {
   emoji: '🔴',
   type: 'virus',
   cost: 5,
-  description: 'Tira 10 de vida e o adversário perde 2 de mana.',
+  description: 'Tira 10 de vida e o adversário perde 2 de energia.',
   target: 'opponent',
   effects: [
     { mechanic: 'damage', params: { amount: 10 } },
-    { mechanic: 'drainMana', params: { amount: 2 } },
+    { mechanic: 'drainEnergy', params: { amount: 2 } },
   ],
 },
 ```
@@ -110,20 +110,21 @@ O TypeScript valida os `params` de cada mecânica, e o editor dá autocomplete. 
 | `healOverTime`      | `amount`, `duration`                              | Vitaminas             |
 | `infection`         | `perSecond`, `total?`, `cureChance?`, `cureInterval?` | Ébola, Herpes    |
 | `statModifier`      | `stat`, `op` (add/mul/set), `value`, `duration?`  | Obesidade, Asma, Café |
-| `drainMana`         | `amount`                                          | Enxaqueca             |
-| `drainManaOverTime` | `amount`, `duration`                              | Ansiedade             |
+| `drainEnergy`         | `amount`                                          | Enxaqueca             |
+| `drainEnergyOverTime` | `amount`, `duration`                              | Ansiedade             |
 | `cleanse`           | `types?`                                          | Antibiótico, Exercício |
 | `immunity`          | `types`, `duration`                               | Vacina, Máscara       |
-| `gainManaOverTime`  | `amount`, `duration`                              | Soro                  |
-| `drainManaAbove`    | `keep`                                            | Burnout               |
+| `gainEnergyOverTime`  | `amount`, `duration`                              | Soro                  |
+| `drainEnergyAbove`    | `keep`                                            | Burnout               |
 | `costIncrease`      | `types`, `amount`                                 | Alergia               |
 | `costLimit`         | `max`, `duration`                                 | Fratura               |
 | `moodSwing`         | `strong`, `weak`, `phase`, `duration`             | Bipolaridade          |
 | `shuffleHand`       | —                                                 | Alzheimer             |
 | `forgetBest`        | —                                                 | Amnésia               |
 | `blind`             | `duration`                                        | Paranoia              |
+| `lockSlots`         | `slots`, `duration`                               | AVC                   |
 
-Stats que se podem modificar: `maxHp`, `maxMana`, `manaRegen`. Se o `statModifier` não tiver `duration`, o efeito é permanente. O mesmo acontece com o `infection` sem `total`.
+Stats que se podem modificar: `maxHp`, `maxEnergy`, `energyRegen`. Se o `statModifier` não tiver `duration`, o efeito é permanente. O mesmo acontece com o `infection` sem `total`.
 
 ## Adicionar uma mecânica nova
 

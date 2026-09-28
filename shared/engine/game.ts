@@ -19,7 +19,7 @@ function createPlayer(name: string, deck: readonly string[]): PlayerState {
   return {
     name,
     hp: CONFIG.baseStats.maxHp,
-    mana: CONFIG.startingMana,
+    energy: CONFIG.startingEnergy,
     base: { ...CONFIG.baseStats },
     hand: cards.splice(0, CONFIG.handSize),
     borrowed: new Array(CONFIG.handSize).fill(false),
@@ -59,6 +59,13 @@ export function maxPlayableCost(p: PlayerState): number | null {
   return max;
 }
 
+/** Posições da mão que o jogador não pode jogar agora (ex.: AVC). */
+export function lockedSlots(p: PlayerState): Set<number> {
+  const locked = new Set<number>();
+  for (const e of p.effects) getMechanic(e.mechanic).lockedSlots?.(e.params).forEach((i) => locked.add(i));
+  return locked;
+}
+
 /** `side`: área onde a carta foi largada; só conta para cartas com alvo 'any' (por omissão, o adversário). */
 export function playCard(state: GameState, player: PlayerIndex, handIndex: number, side: Side = 'opponent'): PlayResult {
   if (state.winner !== null) return { ok: false, reason: 'O jogo terminou.' };
@@ -68,11 +75,12 @@ export function playCard(state: GameState, player: PlayerIndex, handIndex: numbe
   if (!cardId) return { ok: false, reason: 'Carta inválida.' };
   const card = getCard(cardId);
   const cost = cardCost(p, cardId);
-  if (p.mana < cost) return { ok: false, reason: 'Mana insuficiente.' };
+  if (p.energy < cost) return { ok: false, reason: 'Energia insuficiente.' };
+  if (lockedSlots(p).has(handIndex)) return { ok: false, reason: 'Esta carta está bloqueada.' };
   const max = maxPlayableCost(p);
   if (max !== null && cost > max) return { ok: false, reason: `Só podes jogar cartas até custo ${max}.` };
 
-  p.mana -= cost;
+  p.energy -= cost;
   // Ciclo estilo Clash Royale: a carta jogada vai para o fim da fila e entra a próxima.
   // As cartas emprestadas (Alzheimer) não voltam à fila.
   if (!p.borrowed[handIndex]) p.deck.push(cardId);
@@ -150,7 +158,7 @@ export function tick(state: GameState, dt: number) {
   state.players.forEach((p, i) => {
     const target = i as PlayerIndex;
     const stats = computeStats(p);
-    p.mana = Math.min(stats.maxMana, p.mana + stats.manaRegen * dt);
+    p.energy = Math.min(stats.maxEnergy, p.energy + stats.energyRegen * dt);
 
     for (const e of [...p.effects]) {
       if (!p.effects.includes(e)) continue; // removido por outro efeito neste tick
@@ -167,12 +175,12 @@ export function tick(state: GameState, dt: number) {
   finalize(state);
 }
 
-/** Garante limites de vida/mana e verifica se alguém ganhou. */
+/** Garante limites de vida/energia e verifica se alguém ganhou. */
 function finalize(state: GameState) {
   for (const p of state.players) {
     const stats = computeStats(p);
     p.hp = Math.min(p.hp, stats.maxHp);
-    p.mana = Math.min(p.mana, stats.maxMana);
+    p.energy = Math.min(p.energy, stats.maxEnergy);
   }
   const dead = state.players.map((p) => p.hp <= 0);
   if (dead[0] && dead[1]) state.winner = 'draw';

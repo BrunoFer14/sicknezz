@@ -4,7 +4,7 @@ export type PlayerIndex = 0 | 1;
 export type CardType = 'virus' | 'bacteria' | 'fisica' | 'mental' | 'tratamento';
 
 /** Stats que as cartas podem modificar. Para um stat novo, adiciona-o aqui e em CONFIG.baseStats. */
-export type StatName = 'maxHp' | 'maxMana' | 'manaRegen' | 'virusDamageTaken' | 'bacteriaDamageTaken';
+export type StatName = 'maxHp' | 'maxEnergy' | 'energyRegen' | 'virusDamageTaken' | 'bacteriaDamageTaken';
 export type Stats = Record<StatName, number>;
 
 export interface StatModifier {
@@ -46,7 +46,7 @@ export interface ActiveEffect {
 export interface PlayerState {
   name: string;
   hp: number;
-  mana: number;
+  energy: number;
   base: Stats;
   /** Fila de cartas: deck[0] é a próxima a entrar na mão. */
   deck: string[];
@@ -61,7 +61,7 @@ export type GameEvent =
   | { type: 'played'; player: PlayerIndex; cardId: string; target: PlayerIndex }
   | { type: 'damage'; player: PlayerIndex; amount: number }
   | { type: 'heal'; player: PlayerIndex; amount: number }
-  | { type: 'manaLoss'; player: PlayerIndex; amount: number }
+  | { type: 'energyLoss'; player: PlayerIndex; amount: number }
   | { type: 'blocked'; player: PlayerIndex; cardId: string }
   | { type: 'cured'; player: PlayerIndex; cardId: string };
 

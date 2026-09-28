@@ -15,7 +15,7 @@ export function computeStats(player: PlayerState): Stats {
     }
   }
   stats.maxHp = Math.max(1, stats.maxHp);
-  stats.maxMana = Math.max(1, stats.maxMana);
-  stats.manaRegen = Math.max(0, stats.manaRegen);
+  stats.maxEnergy = Math.max(1, stats.maxEnergy);
+  stats.energyRegen = Math.max(0, stats.energyRegen);
   return stats;
 }

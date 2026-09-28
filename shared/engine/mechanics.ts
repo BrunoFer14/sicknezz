@@ -3,7 +3,7 @@
 // fica automaticamente disponível (com autocomplete) na definição das cartas.
 import { getCard } from '../cards';
 import { CONFIG } from './config';
-import { countDiseases, damage, drainMana, gainMana, heal } from './actions';
+import { countDiseases, damage, drainEnergy, gainEnergy, heal } from './actions';
 import type { ActiveEffect, CardType, GameState, PlayerIndex, StatModifier, StatName, TargetKind } from './types';
 
 export interface MechanicContext {
@@ -37,6 +37,8 @@ export interface MechanicDef<P> {
   onOwnerPlay?: (params: P, effect: ActiveEffect, cardType: CardType) => void;
   /** Custo máximo das cartas que o dono do efeito pode jogar enquanto está ativo. */
   maxCost?: (params: P) => number;
+  /** Posições da mão (0 = mais à esquerda) que o dono do efeito não pode jogar enquanto está ativo. */
+  lockedSlots?: (params: P) => number[];
 }
 
 function defineMechanic<P>(def: MechanicDef<P>): MechanicDef<P> {
@@ -133,21 +135,21 @@ export const MECHANICS = {
     modifiers: (p) => [{ stat: p.stat, op: p.op, value: p.value }],
   }),
 
-  /** Retira mana imediatamente. */
-  drainMana: defineMechanic<{ amount: number }>({
-    onApply: ({ state, target }, p) => drainMana(state, target, p.amount),
+  /** Retira energia imediatamente. */
+  drainEnergy: defineMechanic<{ amount: number }>({
+    onApply: ({ state, target }, p) => drainEnergy(state, target, p.amount),
   }),
 
-  /** Retira mana ao longo do tempo. */
-  drainManaOverTime: overTime(({ state, target }, n) => drainMana(state, target, n)),
+  /** Retira energia ao longo do tempo. */
+  drainEnergyOverTime: overTime(({ state, target }, n) => drainEnergy(state, target, n)),
 
-  /** Retira a mana acima de `keep`. */
-  drainManaAbove: defineMechanic<{ keep: number }>({
-    onApply: ({ state, target }, p) => drainMana(state, target, state.players[target].mana - p.keep),
+  /** Retira a energia acima de `keep`. */
+  drainEnergyAbove: defineMechanic<{ keep: number }>({
+    onApply: ({ state, target }, p) => drainEnergy(state, target, state.players[target].energy - p.keep),
   }),
 
   /**
-   * A regeneração de mana oscila a cada `phase` segundos.
+   * A regeneração de energia oscila a cada `phase` segundos.
    * Em quem joga: +strong, −weak, +strong...  No adversário: −strong, +weak, −strong...
    */
   moodSwing: defineMechanic<{ strong: number; weak: number; phase: number; duration: number }>({
@@ -181,8 +183,14 @@ export const MECHANICS = {
     maxCost: (p) => p.max,
   }),
 
-  /** Dá mana ao longo do tempo. */
-  gainManaOverTime: overTime(({ state, target }, n) => gainMana(state, target, n)),
+  /** Durante `duration` segundos o alvo não pode jogar as cartas nestas posições da mão. */
+  lockSlots: defineMechanic<{ slots: number[]; duration: number }>({
+    duration: (p) => p.duration,
+    lockedSlots: (p) => p.slots,
+  }),
+
+  /** Dá energia ao longo do tempo. */
+  gainEnergyOverTime: overTime(({ state, target }, n) => gainEnergy(state, target, n)),
 
   /** A próxima carta destes tipos custa +`amount`; o efeito desaparece quando for jogada. */
   costIncrease: defineMechanic<{ types: CardType[]; amount: number }>({
@@ -232,7 +240,7 @@ function setMood(ctx: MechanicContext, p: { strong: number; weak: number; phase:
   const high = Math.floor(e.elapsed / p.phase) % 2 === 0;
   const up = ctx.source === ctx.target ? high : !high;
   const value = ctx.source === ctx.target ? (up ? 1 + p.strong : 1 - p.weak) : up ? 1 + p.weak : 1 - p.strong;
-  e.modifiers = [{ stat: 'manaRegen', op: 'mul', value }];
+  e.modifiers = [{ stat: 'energyRegen', op: 'mul', value }];
 }
 
 export type MechanicId = keyof typeof MECHANICS;

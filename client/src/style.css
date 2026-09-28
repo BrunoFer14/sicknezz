@@ -9,8 +9,8 @@
   --toxic-dark: #4f8a22;
   --blood: #e5484d;
   --heal: #3fd69b;
-  --mana: #b36bff;
-  --mana-dark: #5d2e91;
+  --energy: #b36bff;
+  --energy-dark: #5d2e91;
   --friendly: #4aa8ff;
   --card-w: clamp(64px, 19vw, 118px);
   font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
@@ -138,7 +138,11 @@ input:focus { outline: none; border-color: var(--toxic); }
 .deck-slot:has(.card) { border: none; cursor: pointer; }
 .deck-slot .card { cursor: pointer; }
 .deck-slot:hover .card { filter: brightness(.7); }
-.filters { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; }
+.filter-box { display: flex; flex-direction: column; gap: 6px; }
+.card-search { max-width: 320px; width: 100%; margin: 0 auto 4px; }
+.filters { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; align-items: center; }
+.filter-label { color: var(--muted); font-size: 12px; min-width: 44px; text-align: right; }
+.pool-empty { grid-column: 1 / -1; text-align: center; padding: 20px 0; }
 .chip {
   border: 1px solid var(--line);
   background: var(--bg2);
@@ -223,7 +227,7 @@ input:focus { outline: none; border-color: var(--toxic); }
   position: relative;
   display: grid;
   grid-template-columns: auto 1fr;
-  grid-template-areas: 'name hp' 'mana mana';
+  grid-template-areas: 'name hp' 'energy energy';
   gap: 6px 12px;
   align-items: center;
   background: var(--panel);
@@ -236,12 +240,12 @@ input:focus { outline: none; border-color: var(--toxic); }
 .hp-fill { height: 100%; background: linear-gradient(90deg, #36b37e, var(--heal)); transition: width .2s; }
 .hp-fill.low { background: linear-gradient(90deg, #a8242a, var(--blood)); }
 .hp-text { position: absolute; inset: 0; display: grid; place-items: center; font-size: 13px; font-weight: 700; text-shadow: 0 1px 2px #000; }
-.mana-row { grid-area: mana; display: flex; align-items: center; gap: 8px; }
-.mana-cells { flex: 1; display: flex; gap: 3px; }
+.energy-row { grid-area: energy; display: flex; align-items: center; gap: 8px; }
+.energy-cells { flex: 1; display: flex; gap: 3px; }
 .cell { flex: 1; height: 14px; background: #1f1630; border-radius: 3px; overflow: hidden; }
-.cell-fill { height: 100%; background: linear-gradient(180deg, #d7a6ff, var(--mana)); }
+.cell-fill { height: 100%; background: linear-gradient(180deg, #d7a6ff, var(--energy)); }
 .cell.locked { background: repeating-linear-gradient(45deg, #3a1d1f, #3a1d1f 3px, #251214 3px, #251214 6px); }
-.mana-text { font-weight: 800; color: var(--mana); min-width: 3.2em; text-align: right; }
+.energy-text { font-weight: 800; color: var(--energy); min-width: 3.2em; text-align: right; }
 .regen { font-size: 12px; color: var(--muted); min-width: 4.5em; }
 .regen.debuff { color: var(--blood); }
 .regen.buff { color: var(--heal); }
@@ -452,11 +456,11 @@ input:focus { outline: none; border-color: var(--toxic); }
   border-radius: 50%;
   display: grid;
   place-items: center;
-  background: var(--mana);
+  background: var(--energy);
   color: #fff;
   font-weight: 900;
   font-size: 13px;
-  box-shadow: 0 0 0 2px var(--mana-dark);
+  box-shadow: 0 0 0 2px var(--energy-dark);
   z-index: 2;
 }
 .art { font-size: calc(var(--card-w) * .36); line-height: 1.2; margin-top: 8%; }
@@ -516,7 +520,7 @@ input:focus { outline: none; border-color: var(--toxic); }
 }
 .float.dmg { color: var(--blood); }
 .float.heal { color: var(--heal); }
-.float.mana { color: var(--mana); font-size: 14px; }
+.float.energy { color: var(--energy); font-size: 14px; }
 .float.info { color: var(--friendly); font-size: 14px; white-space: nowrap; }
 .shake { animation: shake .3s; }
 
@@ -597,3 +601,6 @@ input:focus { outline: none; border-color: var(--toxic); }
   pointer-events: none;
   z-index: 2;
 }
+/* AVC: cartas bloqueadas. */
+.card.slot-locked { filter: grayscale(1) brightness(.5); }
+.card.slot-locked::after { content: '🔒'; position: absolute; inset: 0; display: grid; place-items: center; font-size: 28px; }

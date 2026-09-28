@@ -1,6 +1,6 @@
 // Mensagens trocadas entre cliente e servidor + a "vista" do jogo que cada jogador recebe.
 import { computeStats } from './engine/stats';
-import { cardCost, maxPlayableCost } from './engine/game';
+import { cardCost, lockedSlots, maxPlayableCost } from './engine/game';
 import type { GameEvent, GameState, PlayerIndex, PlayerState, Side, Stats } from './engine/types';
 
 export type ClientMsg =
@@ -37,7 +37,7 @@ export interface EffectView {
 export interface PlayerView {
   name: string;
   hp: number;
-  mana: number;
+  energy: number;
   stats: Stats;
   base: Stats;
   effects: EffectView[];
@@ -55,6 +55,8 @@ export interface GameView {
     next: string;
     /** Custo máximo que podes jogar agora (Fratura), ou null. */
     maxCost: number | null;
+    /** Cartas da mão bloqueadas (AVC). */
+    locked: boolean[];
     /** Paranoia: não vês as tuas doenças. */
     blind: boolean;
   };
@@ -136,7 +138,7 @@ function playerView(p: PlayerState, owner: PlayerIndex): PlayerView {
   return {
     name: p.name,
     hp: p.hp,
-    mana: p.mana,
+    energy: p.energy,
     stats: computeStats(p),
     base: p.base,
     effects: [...plays.values()],
@@ -166,6 +168,7 @@ export function makeView(state: GameState, you: PlayerIndex, events: GameEvent[]
       borrowed: [...me.borrowed],
       next: me.deck[0] ?? me.hand[0],
       maxCost: maxPlayableCost(me),
+      locked: me.hand.map((_, i) => lockedSlots(me).has(i)),
       blind,
     },
     opp: { ...playerView(opp, oi), handCount: opp.hand.length },

@@ -9,8 +9,8 @@ interface Hud {
   name: HTMLElement;
   hpFill: HTMLElement;
   hpText: HTMLElement;
-  manaCells: HTMLElement;
-  manaText: HTMLElement;
+  energyCells: HTMLElement;
+  energyText: HTMLElement;
   regen: HTMLElement;
 }
 
@@ -24,9 +24,9 @@ const HUD_HTML = `
   <div class="hud">
     <div class="name"></div>
     <div class="hp"><div class="hp-fill"></div><span class="hp-text"></span></div>
-    <div class="mana-row">
-      <div class="mana-cells"></div>
-      <span class="mana-text"></span>
+    <div class="energy-row">
+      <div class="energy-cells"></div>
+      <span class="energy-text"></span>
       <span class="regen"></span>
     </div>
   </div>`;
@@ -34,11 +34,11 @@ const HUD_HTML = `
 const fmt = (n: number) => String(Math.round(n * 100) / 100).replace('.', ',');
 const clockText = (t: number) => `${Math.floor(t / 60)}:${String(Math.floor(t % 60)).padStart(2, '0')}`;
 
-/** Escurece a carta enquanto não há mana suficiente para a jogar. */
-function showCharge(cardNode: HTMLElement, mana: number, cost: number) {
-  const ready = mana >= cost;
+/** Escurece a carta enquanto não há energia suficiente para a jogar. */
+function showCharge(cardNode: HTMLElement, energy: number, cost: number) {
+  const ready = energy >= cost;
   cardNode.classList.toggle('unaffordable', !ready);
-  (cardNode.querySelector('.charge') as HTMLElement).style.height = `${ready ? 0 : (1 - mana / cost) * 100}%`;
+  (cardNode.querySelector('.charge') as HTMLElement).style.height = `${ready ? 0 : (1 - energy / cost) * 100}%`;
 }
 
 export class GameScreen {
@@ -60,7 +60,7 @@ export class GameScreen {
   private lastWinner: GameView['winner'] = null;
   private lastCount = 0;
   private banner: HTMLElement;
-  /** Cópia da carta que está a ser arrastada (tem de acompanhar a mana também). */
+  /** Cópia da carta que está a ser arrastada (tem de acompanhar a energia também). */
   private dragGhost: { index: number; el: HTMLElement } | null = null;
   private onKey = (e: KeyboardEvent) => {
     const n = Number(e.key);
@@ -113,8 +113,8 @@ export class GameScreen {
       name: q('.name', side),
       hpFill: q('.hp-fill', side),
       hpText: q('.hp-text', side),
-      manaCells: q('.mana-cells', side),
-      manaText: q('.mana-text', side),
+      energyCells: q('.energy-cells', side),
+      energyText: q('.energy-text', side),
       regen: q('.regen', side),
     });
     const makeBoard = (el: HTMLElement): Board => ({ root: el, effects: q('.effects', el), els: new Map() });
@@ -207,26 +207,26 @@ export class GameScreen {
     hud.hpFill.classList.toggle('low', hpPct < 0.3);
     hud.hpText.textContent = `${Math.ceil(p.hp)} / ${p.stats.maxHp}`;
 
-    const cellCount = Math.max(p.base.maxMana, p.stats.maxMana);
-    if (hud.manaCells.children.length !== cellCount) {
-      hud.manaCells.innerHTML = '<div class="cell"><div class="cell-fill"></div></div>'.repeat(cellCount);
+    const cellCount = Math.max(p.base.maxEnergy, p.stats.maxEnergy);
+    if (hud.energyCells.children.length !== cellCount) {
+      hud.energyCells.innerHTML = '<div class="cell"><div class="cell-fill"></div></div>'.repeat(cellCount);
     }
-    Array.from(hud.manaCells.children).forEach((cell, i) => {
-      const locked = i >= p.stats.maxMana;
+    Array.from(hud.energyCells.children).forEach((cell, i) => {
+      const locked = i >= p.stats.maxEnergy;
       cell.classList.toggle('locked', locked);
-      const fill = Math.min(1, Math.max(0, p.mana - i));
+      const fill = Math.min(1, Math.max(0, p.energy - i));
       (cell.firstElementChild as HTMLElement).style.width = locked ? '0' : `${fill * 100}%`;
     });
-    hud.manaText.textContent = `${Math.floor(p.mana)}/${p.stats.maxMana}`;
-    hud.regen.textContent = p.stats.manaRegen > 0 ? `+1 a cada ${fmt(1 / p.stats.manaRegen)}s` : 'parada';
-    hud.regen.classList.toggle('debuff', p.stats.manaRegen < p.base.manaRegen);
-    hud.regen.classList.toggle('buff', p.stats.manaRegen > p.base.manaRegen);
+    hud.energyText.textContent = `${Math.floor(p.energy)}/${p.stats.maxEnergy}`;
+    hud.regen.textContent = p.stats.energyRegen > 0 ? `+1 a cada ${fmt(1 / p.stats.energyRegen)}s` : 'parada';
+    hud.regen.classList.toggle('debuff', p.stats.energyRegen < p.base.energyRegen);
+    hud.regen.classList.toggle('buff', p.stats.energyRegen > p.base.energyRegen);
   }
 
   // ---------- Mão ----------
 
   private updateHand(view: GameView) {
-    const { hand, mana, next, costs, borrowed, maxCost } = view.me;
+    const { hand, energy, next, costs, borrowed, maxCost, locked } = view.me;
     hand.forEach((id, i) => {
       const slot = this.handSlots[i];
       if (this.handIds[i] !== id) {
@@ -242,9 +242,10 @@ export class GameScreen {
       (el.querySelector('.cost') as HTMLElement).textContent = String(cost);
       el.classList.toggle('taxed', cost > getCard(id).cost);
       el.classList.toggle('borrowed', borrowed[i]);
-      el.classList.toggle('locked', maxCost !== null && cost > maxCost);
-      showCharge(el, mana, cost);
-      if (this.dragGhost?.index === i) showCharge(this.dragGhost.el, mana, cost);
+      el.classList.toggle('locked', maxCost !== null && cost > maxCost && !locked[i]);
+      el.classList.toggle('slot-locked', locked[i]);
+      showCharge(el, energy, cost);
+      if (this.dragGhost?.index === i) showCharge(this.dragGhost.el, energy, cost);
     });
     if (this.nextId !== next) {
       this.nextId = next;
@@ -266,14 +267,20 @@ export class GameScreen {
       this.toast('Espera pelo início do jogo!');
       return false;
     }
+    if (v.me.locked[index]) {
+      this.toast('AVC: esta carta está bloqueada');
+      sfx.error();
+      this.shake(this.handSlots[index]);
+      return false;
+    }
     if (v.me.maxCost !== null && v.me.costs[index] > v.me.maxCost) {
       this.toast(`Fratura: só podes jogar cartas até custo ${v.me.maxCost}`);
       sfx.error();
       this.shake(this.handSlots[index]);
       return false;
     }
-    if (v.me.mana < v.me.costs[index]) {
-      this.toast('Mana insuficiente');
+    if (v.me.energy < v.me.costs[index]) {
+      this.toast('Energia insuficiente');
       sfx.error();
       this.shake(this.handSlots[index]);
       return false;
@@ -418,9 +425,9 @@ export class GameScreen {
         this.float(mine(e.player) ? this.hud.me : this.hud.opp, `+${Math.round(e.amount)}`, 'heal');
         sfx.heal();
         break;
-      case 'manaLoss':
-        this.float(mine(e.player) ? this.hud.me : this.hud.opp, `-${fmt(e.amount)} mana`, 'mana');
-        sfx.mana();
+      case 'energyLoss':
+        this.float(mine(e.player) ? this.hud.me : this.hud.opp, `-${fmt(e.amount)} energia`, 'energy');
+        sfx.energy();
         break;
       case 'blocked': {
         sfx.blocked();

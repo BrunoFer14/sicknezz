@@ -56,7 +56,7 @@ export const sfx = {
     tone(660, 0.12, { vol: 0.07 });
     tone(880, 0.15, { vol: 0.07, delay: 0.08 });
   }, 400),
-  mana: () => tone(500, 0.2, { type: 'sawtooth', vol: 0.04, to: 200 }),
+  energy: () => tone(500, 0.2, { type: 'sawtooth', vol: 0.04, to: 200 }),
   blocked: () => {
     tone(1200, 0.06, { type: 'square', vol: 0.04 });
     tone(1200, 0.06, { type: 'square', vol: 0.04, delay: 0.09 });
