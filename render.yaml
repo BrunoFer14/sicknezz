@@ -1,0 +1,9 @@
+# Configuração para publicar no Render (render.com) — ver README, secção "Publicar online".
+services:
+  - type: web
+    name: sicknezz
+    runtime: node
+    plan: free
+    buildCommand: npm ci --include=dev && npm run build
+    startCommand: npm start
+    healthCheckPath: /

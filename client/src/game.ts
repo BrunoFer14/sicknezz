@@ -1,0 +1,395 @@
+import { getCard } from '../../shared/cards';
+import type { GameEvent } from '../../shared/engine/types';
+import type { ClientMsg, EffectView, GameView, PlayerView } from '../../shared/protocol';
+import { cardEl, escapeHtml } from './card';
+
+interface Hud {
+  root: HTMLElement;
+  name: HTMLElement;
+  hpFill: HTMLElement;
+  hpText: HTMLElement;
+  manaCells: HTMLElement;
+  manaText: HTMLElement;
+  regen: HTMLElement;
+}
+
+interface Board {
+  root: HTMLElement;
+  effects: HTMLElement;
+  els: Map<number, HTMLElement>;
+}
+
+const HUD_HTML = `
+  <div class="hud">
+    <div class="name"></div>
+    <div class="hp"><div class="hp-fill"></div><span class="hp-text"></span></div>
+    <div class="mana-row">
+      <div class="mana-cells"></div>
+      <span class="mana-text"></span>
+      <span class="regen"></span>
+    </div>
+  </div>`;
+
+const fmt = (n: number) => String(Math.round(n * 100) / 100).replace('.', ',');
+
+export class GameScreen {
+  private root = document.createElement('div');
+  private view: GameView | null = null;
+  private hud: { me: Hud; opp: Hud };
+  private board: { me: Board; opp: Board };
+  private handSlots: HTMLElement[] = [];
+  private handIds: (string | null)[] = [];
+  private oppHand: HTMLElement;
+  private nextSlot: HTMLElement;
+  private nextId: string | null = null;
+  private clock: HTMLElement;
+  private countdown: HTMLElement;
+  private overlay: HTMLElement;
+  private toastEl: HTMLElement;
+  private toastTimer = 0;
+  private onKey = (e: KeyboardEvent) => {
+    const n = Number(e.key);
+    if (n >= 1 && n <= this.handSlots.length) this.tryPlay(n - 1);
+  };
+
+  constructor(
+    container: HTMLElement,
+    private send: (msg: ClientMsg) => void,
+    private onExit: () => void,
+  ) {
+    this.root.className = 'game';
+    this.root.innerHTML = `
+      <section class="side opp">${HUD_HTML}<div class="opp-hand"></div></section>
+      <section class="board opp-board">
+        <div class="zone-label">Área do adversário</div>
+        <div class="effects"></div>
+      </section>
+      <div class="midline"><span class="clock">0:00</span></div>
+      <section class="board my-board">
+        <div class="zone-label">A tua área</div>
+        <div class="effects"></div>
+      </section>
+      <section class="side me">
+        <div class="hand-row">
+          <div class="hand"></div>
+          <div class="next"><span>Próxima</span><div class="next-slot"></div></div>
+        </div>
+        ${HUD_HTML}
+      </section>
+      <div class="countdown" hidden></div>
+      <div class="overlay" hidden></div>
+      <div class="toast"></div>`;
+
+    const q = <T extends HTMLElement>(sel: string, from: ParentNode = this.root) => from.querySelector<T>(sel)!;
+    const makeHud = (side: HTMLElement): Hud => ({
+      root: q('.hud', side),
+      name: q('.name', side),
+      hpFill: q('.hp-fill', side),
+      hpText: q('.hp-text', side),
+      manaCells: q('.mana-cells', side),
+      manaText: q('.mana-text', side),
+      regen: q('.regen', side),
+    });
+    const makeBoard = (el: HTMLElement): Board => ({ root: el, effects: q('.effects', el), els: new Map() });
+
+    this.hud = { me: makeHud(q('.side.me')), opp: makeHud(q('.side.opp')) };
+    this.board = { me: makeBoard(q('.my-board')), opp: makeBoard(q('.opp-board')) };
+    this.oppHand = q('.opp-hand');
+    this.nextSlot = q('.next-slot');
+    this.clock = q('.clock');
+    this.countdown = q('.countdown');
+    this.overlay = q('.overlay');
+    this.toastEl = q('.toast');
+
+    const hand = q('.hand');
+    for (let i = 0; i < 4; i++) {
+      const slot = document.createElement('div');
+      slot.className = 'slot';
+      hand.append(slot);
+      this.handSlots.push(slot);
+      this.handIds.push(null);
+      this.setupDrag(slot, i);
+    }
+
+    window.addEventListener('keydown', this.onKey);
+    container.append(this.root);
+  }
+
+  destroy() {
+    window.removeEventListener('keydown', this.onKey);
+    this.root.remove();
+  }
+
+  update(view: GameView) {
+    this.view = view;
+    this.updateHud(this.hud.me, view.me);
+    this.updateHud(this.hud.opp, view.opp);
+    this.updateHand(view);
+    this.updateOppHand(view.opp.handCount);
+    this.syncEffects(this.board.me, view.me.effects);
+    this.syncEffects(this.board.opp, view.opp.effects);
+
+    const t = Math.max(0, view.time);
+    this.clock.textContent = `${Math.floor(t / 60)}:${String(Math.floor(t % 60)).padStart(2, '0')}`;
+    this.countdown.hidden = view.time >= 0;
+    if (view.time < 0) this.countdown.textContent = String(Math.ceil(-view.time));
+
+    view.events.forEach((e) => this.handleEvent(e, view));
+    this.updateOverlay(view);
+  }
+
+  toast(message: string) {
+    this.toastEl.textContent = message;
+    this.toastEl.classList.add('show');
+    clearTimeout(this.toastTimer);
+    this.toastTimer = window.setTimeout(() => this.toastEl.classList.remove('show'), 1600);
+  }
+
+  // ---------- HUD ----------
+
+  private updateHud(hud: Hud, p: PlayerView) {
+    hud.name.textContent = p.name;
+    const hpPct = Math.max(0, p.hp / p.stats.maxHp);
+    hud.hpFill.style.width = `${hpPct * 100}%`;
+    hud.hpFill.classList.toggle('low', hpPct < 0.3);
+    hud.hpText.textContent = `${Math.ceil(p.hp)} / ${p.stats.maxHp}`;
+
+    const cellCount = Math.max(p.base.maxMana, p.stats.maxMana);
+    if (hud.manaCells.children.length !== cellCount) {
+      hud.manaCells.innerHTML = '<div class="cell"><div class="cell-fill"></div></div>'.repeat(cellCount);
+    }
+    Array.from(hud.manaCells.children).forEach((cell, i) => {
+      const locked = i >= p.stats.maxMana;
+      cell.classList.toggle('locked', locked);
+      const fill = Math.min(1, Math.max(0, p.mana - i));
+      (cell.firstElementChild as HTMLElement).style.width = locked ? '0' : `${fill * 100}%`;
+    });
+    hud.manaText.textContent = `${Math.floor(p.mana)}/${p.stats.maxMana}`;
+    hud.regen.textContent = `+${fmt(p.stats.manaRegen)}/s`;
+    hud.regen.classList.toggle('debuff', p.stats.manaRegen < p.base.manaRegen);
+    hud.regen.classList.toggle('buff', p.stats.manaRegen > p.base.manaRegen);
+  }
+
+  // ---------- Mão ----------
+
+  private updateHand(view: GameView) {
+    const { hand, mana, next } = view.me;
+    hand.forEach((id, i) => {
+      const slot = this.handSlots[i];
+      if (this.handIds[i] !== id) {
+        this.handIds[i] = id;
+        const el = cardEl(id);
+        el.classList.add('enter');
+        el.insertAdjacentHTML('beforeend', `<div class="key">[${i + 1}]</div>`);
+        slot.replaceChildren(el);
+      }
+      const cardNode = slot.firstElementChild as HTMLElement;
+      const cost = getCard(id).cost;
+      const ready = mana >= cost;
+      cardNode.classList.toggle('unaffordable', !ready);
+      (cardNode.querySelector('.charge') as HTMLElement).style.height = `${ready ? 0 : (1 - mana / cost) * 100}%`;
+    });
+    if (this.nextId !== next) {
+      this.nextId = next;
+      this.nextSlot.replaceChildren(cardEl(next, 'mini'));
+    }
+  }
+
+  private updateOppHand(count: number) {
+    if (this.oppHand.children.length !== count) {
+      this.oppHand.innerHTML = '<div class="card-back"><span>🦠</span></div>'.repeat(count);
+    }
+  }
+
+  private tryPlay(index: number): boolean {
+    const v = this.view;
+    const id = this.handIds[index];
+    if (!v || !id || v.winner !== null) return false;
+    if (v.time < 0) {
+      this.toast('Espera pelo início do jogo!');
+      return false;
+    }
+    if (v.me.mana < getCard(id).cost) {
+      this.toast('Mana insuficiente');
+      this.shake(this.handSlots[index]);
+      return false;
+    }
+    this.send({ t: 'play', handIndex: index });
+    return true;
+  }
+
+  private shake(el: HTMLElement) {
+    el.classList.remove('shake');
+    void el.offsetWidth; // reinicia a animação
+    el.classList.add('shake');
+  }
+
+  // ---------- Drag & drop ----------
+
+  private setupDrag(slot: HTMLElement, index: number) {
+    slot.addEventListener('pointerdown', (down) => {
+      const id = this.handIds[index];
+      const source = slot.firstElementChild as HTMLElement | null;
+      if (!id || !source || down.button !== 0) return;
+      down.preventDefault();
+
+      const card = getCard(id);
+      const zone = card.target === 'opponent' ? this.board.opp.root : this.board.me.root;
+      const wrongZone = card.target === 'opponent' ? this.board.me.root : this.board.opp.root;
+      const rect = source.getBoundingClientRect();
+      const offX = down.clientX - rect.left;
+      const offY = down.clientY - rect.top;
+
+      const ghost = source.cloneNode(true) as HTMLElement;
+      ghost.classList.remove('enter');
+      ghost.classList.add('ghost');
+      ghost.style.width = `${rect.width}px`;
+      ghost.style.height = `${rect.height}px`;
+      const moveGhost = (x: number, y: number) => (ghost.style.transform = `translate(${x - offX}px, ${y - offY}px) rotate(-4deg) scale(1.05)`);
+      moveGhost(down.clientX, down.clientY);
+      document.body.append(ghost);
+
+      slot.classList.add('dragging');
+      zone.classList.add('drop-target');
+      const inside = (el: HTMLElement, e: PointerEvent) => {
+        const r = el.getBoundingClientRect();
+        return e.clientX >= r.left && e.clientX <= r.right && e.clientY >= r.top && e.clientY <= r.bottom;
+      };
+
+      const move = (e: PointerEvent) => {
+        moveGhost(e.clientX, e.clientY);
+        zone.classList.toggle('drop-hover', inside(zone, e));
+      };
+      const end = (e: PointerEvent) => {
+        window.removeEventListener('pointermove', move);
+        window.removeEventListener('pointerup', end);
+        window.removeEventListener('pointercancel', end);
+        slot.classList.remove('dragging');
+        zone.classList.remove('drop-target', 'drop-hover');
+
+        let played = false;
+        if (e.type === 'pointerup' && inside(zone, e)) played = this.tryPlay(index);
+        else if (e.type === 'pointerup' && inside(wrongZone, e)) {
+          this.toast(card.target === 'opponent' ? 'Esta carta joga-se na área do adversário' : 'Esta carta joga-se na tua área');
+        }
+
+        if (played) {
+          ghost.classList.add('consumed');
+          setTimeout(() => ghost.remove(), 250);
+        } else {
+          ghost.classList.add('returning');
+          ghost.style.transform = `translate(${rect.left}px, ${rect.top}px)`;
+          setTimeout(() => ghost.remove(), 200);
+        }
+      };
+      window.addEventListener('pointermove', move);
+      window.addEventListener('pointerup', end);
+      window.addEventListener('pointercancel', end);
+    });
+  }
+
+  // ---------- Efeitos ativos ----------
+
+  private syncEffects(board: Board, effects: EffectView[]) {
+    const alive = new Set<number>();
+    for (const e of effects) {
+      alive.add(e.id);
+      let el = board.els.get(e.id);
+      if (!el) {
+        const card = getCard(e.cardId);
+        el = document.createElement('div');
+        el.className = `effect type-${card.type} ${e.hostile ? 'hostile' : 'friendly'}`;
+        el.innerHTML = `
+          <span class="e-emoji">${card.emoji}</span>
+          <div class="e-body">
+            <span class="e-name">${escapeHtml(card.name)}</span>
+            ${e.duration === null ? '<span class="e-perm">permanente</span>' : '<div class="e-timer"><div class="e-fill"></div></div>'}
+          </div>`;
+        el.title = card.description;
+        board.effects.append(el);
+        board.els.set(e.id, el);
+      }
+      if (e.remaining !== null && e.duration) {
+        (el.querySelector('.e-fill') as HTMLElement).style.width = `${(e.remaining / e.duration) * 100}%`;
+      }
+    }
+    for (const [id, el] of board.els) {
+      if (alive.has(id)) continue;
+      board.els.delete(id);
+      el.classList.add('leaving');
+      setTimeout(() => el.remove(), 250);
+    }
+  }
+
+  // ---------- Eventos / animações ----------
+
+  private handleEvent(e: GameEvent, view: GameView) {
+    const mine = (p: number) => p === view.you;
+    switch (e.type) {
+      case 'played': {
+        const board = mine(e.target) ? this.board.me : this.board.opp;
+        const splash = document.createElement('div');
+        splash.className = `splash ${mine(e.player) ? 'by-me' : 'by-opp'}`;
+        splash.append(cardEl(e.cardId, 'mini'));
+        board.root.append(splash);
+        setTimeout(() => splash.remove(), 1200);
+        break;
+      }
+      case 'damage':
+        this.float(mine(e.player) ? this.hud.me : this.hud.opp, `-${Math.round(e.amount)}`, 'dmg');
+        break;
+      case 'heal':
+        this.float(mine(e.player) ? this.hud.me : this.hud.opp, `+${Math.round(e.amount)}`, 'heal');
+        break;
+      case 'manaLoss':
+        this.float(mine(e.player) ? this.hud.me : this.hud.opp, `-${fmt(e.amount)} mana`, 'mana');
+        break;
+      case 'blocked':
+        this.float(mine(e.player) ? this.hud.me : this.hud.opp, `Imune a ${getCard(e.cardId).name}!`, 'info');
+        break;
+      case 'cured':
+        this.float(mine(e.player) ? this.hud.me : this.hud.opp, `${getCard(e.cardId).name} passou!`, 'info');
+        break;
+    }
+  }
+
+  private float(hud: Hud, text: string, cls: string) {
+    const el = document.createElement('span');
+    el.className = `float ${cls}`;
+    el.textContent = text;
+    el.style.left = `${40 + Math.random() * 30}%`;
+    hud.root.append(el);
+    el.addEventListener('animationend', () => el.remove());
+  }
+
+  // ---------- Fim de jogo ----------
+
+  private updateOverlay(view: GameView) {
+    if (view.winner === null) {
+      this.overlay.hidden = true;
+      return;
+    }
+    const title = view.winner === 'draw' ? 'Empate' : view.winner === view.you ? 'Vitória!' : 'Derrota';
+    const cls = view.winner === 'draw' ? 'draw' : view.winner === view.you ? 'win' : 'lose';
+    const oppIdx = view.you === 0 ? 1 : 0;
+    const asked = view.rematch[view.you];
+    const oppAsked = view.rematch[oppIdx];
+    const note = !view.opponentConnected ? 'O adversário saiu.' : oppAsked ? 'O adversário quer revanche!' : '';
+    const key = `${cls}|${asked}|${note}`;
+    if (this.overlay.dataset.key === key && !this.overlay.hidden) return;
+    this.overlay.dataset.key = key;
+
+    this.overlay.innerHTML = `
+      <div class="result ${cls}">
+        <h2>${title}</h2>
+        <p>${escapeHtml(note)}</p>
+        <div class="row">
+          ${view.opponentConnected ? `<button class="btn primary" id="rematch" ${asked ? 'disabled' : ''}>${asked ? 'À espera…' : 'Revanche'}</button>` : ''}
+          <button class="btn" id="exit">Sair</button>
+        </div>
+      </div>`;
+    this.overlay.querySelector('#rematch')?.addEventListener('click', () => this.send({ t: 'rematch' }));
+    this.overlay.querySelector('#exit')!.addEventListener('click', () => this.onExit());
+    this.overlay.hidden = false;
+  }
+}
