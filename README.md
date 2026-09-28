@@ -16,7 +16,11 @@ Para produção: `npm run build` e depois `npm start`. O servidor fica em http:/
 ## Regras
 
 - 100 de vida. Perde quem chegar a 0 primeiro. Não há limite de tempo.
-- Mana: começa em 0, máximo 10, +1 por segundo.
+- Mana: começa em 0, máximo 10, +1 a cada 1,5 segundos.
+- **Procurar adversário**: matchmaking automático. Conta para o ranking (pontos Elo, começa em 1000).
+- **Criar sala / código**: partida amigável com um amigo. Conta para as estatísticas, mas não para os pontos.
+- Se a ligação cair, tens 30 segundos para voltar (basta recarregar a página). Se não voltares, perdes.
+- Ver uma carta em grande: passa o rato por cima (ou mantém o dedo em cima, no telemóvel).
 - Cada jogador monta um baralho de 10 cartas diferentes no botão "Editar baralho". O baralho fica guardado no browser.
 - Mão de 4 cartas. A carta jogada vai para o fim do baralho e entra a próxima.
 - As doenças largam-se na área do adversário. Os tratamentos largam-se na tua área.
@@ -56,8 +60,17 @@ shared/            código partilhado entre servidor e cliente
     actions.ts     damage / heal / drainMana / countDiseases
     config.ts      valores base
   protocol.ts      mensagens cliente <-> servidor
-server/            servidor WebSocket (salas, corre o jogo 20x por segundo)
-client/            interface (lobby, construtor de baralhos, tabuleiro, drag & drop)
+server/
+  index.ts         ligações, matchmaking, reconexão
+  room.ts          uma partida (corre o jogo 20x por segundo)
+  store.ts         estatísticas e ranking (PostgreSQL ou ficheiro)
+client/src/
+  game.ts          tabuleiro, drag & drop, histórico
+  deckbuilder.ts   construtor de baralhos
+  stats.ts         ecrã de estatísticas/ranking
+  preview.ts       ver carta em grande
+  sound.ts         sons (gerados, sem ficheiros)
+  net.ts           ligação ao servidor com reconexão automática
 ```
 
 O servidor é quem decide o resultado de cada jogada e valida os baralhos, por isso ninguém consegue fazer batota no browser.
@@ -122,3 +135,10 @@ O projeto já traz o [render.yaml](render.yaml).
 4. Sempre que fizeres push para o GitHub, o site é atualizado automaticamente.
 
 No plano gratuito, o servidor adormece após 15 minutos sem jogadores. O primeiro acesso depois disso demora cerca de 1 minuto a arrancar.
+
+### Guardar as estatísticas e o ranking
+
+Não há contas: cada browser recebe uma identidade anónima, guardada no próprio browser. Se o jogador limpar os dados do browser, começa um perfil novo.
+
+- Sem configuração, os dados ficam em `data/db.json`. **No Render gratuito este ficheiro perde-se sempre que o servidor reinicia.**
+- Para guardar para sempre, cria uma base de dados PostgreSQL gratuita em https://neon.tech e copia a "connection string" (`postgresql://...`). No Render, vai ao serviço e escolhe **Environment → Add Environment Variable**. O nome é `DATABASE_URL` e o valor é essa connection string. As tabelas são criadas automaticamente.

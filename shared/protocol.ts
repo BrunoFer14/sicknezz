@@ -3,15 +3,24 @@ import { computeStats } from './engine/stats';
 import type { GameEvent, GameState, PlayerIndex, PlayerState, Stats } from './engine/types';
 
 export type ClientMsg =
+  /** Primeira mensagem de cada ligação. `session` identifica o separador (reconexão), `profileId`/`secret` o jogador (estatísticas). */
+  | { t: 'hello'; session: string; profileId: string; secret: string }
   | { t: 'create'; name: string; deck: string[] }
   | { t: 'join'; code: string; name: string; deck: string[] }
+  /** Entrar na fila de matchmaking (conta para o ranking). */
+  | { t: 'queue'; name: string; deck: string[] }
   | { t: 'play'; handIndex: number }
   | { t: 'rematch' }
-  | { t: 'leave' };
+  | { t: 'leave' }
+  | { t: 'stats' };
 
 export type ServerMsg =
+  /** `resumed`: voltaste a entrar numa partida que estava a decorrer. */
+  | { t: 'welcome'; resumed: boolean }
   | { t: 'lobby'; code: string; you: PlayerIndex; players: (string | null)[] }
+  | { t: 'queued' }
   | { t: 'state'; view: GameView }
+  | { t: 'stats'; stats: StatsPayload }
   | { t: 'error'; message: string };
 
 /** Uma carta ativa num jogador (junta todos os efeitos criados pela mesma jogada). */
@@ -42,6 +51,61 @@ export interface GameView {
   events: GameEvent[];
   rematch: [boolean, boolean];
   opponentConnected: boolean;
+  /** Segundos que faltam para o adversário desligado perder a partida. */
+  opponentReconnectIn: number | null;
+  ranked: boolean;
+  /** Os teus pontos de ranking (partidas ranked). */
+  rating: number | null;
+  /** Pontos ganhos/perdidos nesta partida, depois de acabar. */
+  ratingDelta: number | null;
+}
+
+export interface ViewExtras {
+  rematch: [boolean, boolean];
+  opponentConnected: boolean;
+  opponentReconnectIn: number | null;
+  ranked: boolean;
+  rating: number | null;
+  ratingDelta: number | null;
+}
+
+// ---------- Estatísticas ----------
+
+export interface ProfileStats {
+  name: string;
+  rating: number;
+  games: number;
+  rankedGames: number;
+  wins: number;
+  losses: number;
+  draws: number;
+  /** Quantas vezes jogaste cada carta. */
+  cardPlays: Record<string, number>;
+}
+
+export interface LeaderboardRow {
+  name: string;
+  rating: number;
+  wins: number;
+  losses: number;
+  draws: number;
+  me: boolean;
+}
+
+export interface CardStatRow {
+  cardId: string;
+  /** Vezes que a carta foi jogada. */
+  plays: number;
+  /** Partidas em que estava no baralho. */
+  games: number;
+  /** Partidas ganhas com a carta no baralho. */
+  wins: number;
+}
+
+export interface StatsPayload {
+  me: ProfileStats | null;
+  leaderboard: LeaderboardRow[];
+  cards: CardStatRow[];
 }
 
 function playerView(p: PlayerState, owner: PlayerIndex): PlayerView {
@@ -67,13 +131,7 @@ function playerView(p: PlayerState, owner: PlayerIndex): PlayerView {
   };
 }
 
-export function makeView(
-  state: GameState,
-  you: PlayerIndex,
-  events: GameEvent[],
-  rematch: [boolean, boolean],
-  opponentConnected: boolean,
-): GameView {
+export function makeView(state: GameState, you: PlayerIndex, events: GameEvent[], extras: ViewExtras): GameView {
   const oi: PlayerIndex = you === 0 ? 1 : 0;
   const me = state.players[you];
   const opp = state.players[oi];
@@ -84,7 +142,6 @@ export function makeView(
     me: { ...playerView(me, you), hand: [...me.hand], next: me.deck[0] ?? me.hand[0] },
     opp: { ...playerView(opp, oi), handCount: opp.hand.length },
     events,
-    rematch,
-    opponentConnected,
+    ...extras,
   };
 }

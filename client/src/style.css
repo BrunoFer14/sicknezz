@@ -57,6 +57,38 @@ input:focus { outline: none; border-color: var(--toxic); }
   padding: 16px;
   gap: 12px;
 }
+.btn.big { padding: 14px 18px; font-size: 17px; }
+.stats-btn { width: min(360px, 100%); }
+.searching { font-size: 56px; animation: spin 2.5s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.rating { font-weight: 700; }
+.rating.up { color: var(--toxic) !important; }
+.rating.down { color: var(--blood) !important; }
+
+/* ---------- Estatísticas ---------- */
+.stats-screen {
+  height: 100dvh;
+  overflow-y: auto;
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.stats-body { display: flex; flex-direction: column; gap: 10px; }
+.stats-body h4 { margin: 8px 0 0; }
+.stats-name { margin: 0; text-align: center; font-size: 22px; }
+.tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 8px; }
+.tile { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 12px; display: flex; flex-direction: column; gap: 4px; text-align: center; }
+.tile span { color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: .05em; }
+.tile b { font-size: 24px; }
+.top-cards { margin: 0; padding-left: 22px; display: flex; flex-direction: column; gap: 4px; }
+.table-wrap { overflow-x: auto; }
+.stats-table { width: 100%; border-collapse: collapse; font-size: 14px; }
+.stats-table th { text-align: left; color: var(--muted); font-weight: 600; font-size: 12px; text-transform: uppercase; padding: 8px; border-bottom: 1px solid var(--line); }
+.stats-table td { padding: 8px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+.stats-table tr.me td { background: color-mix(in srgb, var(--toxic) 12%, transparent); }
 .deck-summary { flex-direction: row; align-items: center; justify-content: space-between; padding: 12px 16px; }
 .deck-emojis { display: flex; flex-wrap: wrap; gap: 2px; font-size: 18px; }
 
@@ -263,7 +295,50 @@ input:focus { outline: none; border-color: var(--toxic); }
 .midline { display: flex; align-items: center; gap: 12px; }
 .midline::before, .midline::after { content: ''; flex: 1; height: 1px; background: linear-gradient(90deg, transparent, var(--toxic-dark), transparent); }
 .clock { font-variant-numeric: tabular-nums; color: var(--muted); font-size: 13px; }
-.log-toggle { background: none; border: 1px solid var(--line); border-radius: 8px; padding: 2px 8px; cursor: pointer; }
+.icon-btn { background: none; border: 1px solid var(--line); border-radius: 8px; padding: 2px 8px; cursor: pointer; }
+
+/* Avisos de ligação */
+.net-banner, .opp-banner {
+  position: fixed;
+  top: max(8px, env(safe-area-inset-top));
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 80;
+  padding: 8px 16px;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 600;
+  max-width: calc(100vw - 32px);
+  text-align: center;
+}
+.net-banner { background: var(--blood); color: #fff; }
+.opp-banner { background: var(--panel); border: 1px solid #d9a53b; color: #f3d38a; top: 50%; }
+
+/* Ver carta em grande */
+.card-preview {
+  position: fixed;
+  top: 50%;
+  width: min(250px, 70vw);
+  transform: translateY(-50%);
+  z-index: 90;
+  pointer-events: none;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  animation: pop .15s ease-out;
+  --card-w: min(250px, 70vw);
+}
+.card-preview.left { left: 24px; }
+.card-preview.right { right: 24px; }
+.card-preview.center { left: 50%; transform: translate(-50%, -50%); }
+.card-preview .card { box-shadow: 0 20px 60px rgba(0, 0, 0, .7); padding: 14px; gap: 8px; }
+.card-preview .cost { width: 38px; height: 38px; font-size: 20px; top: 8px; left: 8px; }
+.card-preview .ctype { font-size: 22px; top: 8px; right: 10px; }
+.card-preview .cname { font-size: 24px; }
+.card-preview .desc { font-size: 16px; color: var(--text); }
+.card-preview .charge { display: none; }
+.preview-info { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 8px 10px; font-size: 13px; text-align: center; color: var(--muted); }
+.card { -webkit-touch-callout: none; }
 
 /* ---------- Histórico ---------- */
 .log {

@@ -2,6 +2,7 @@ import { getCard } from '../../shared/cards';
 import type { GameEvent } from '../../shared/engine/types';
 import type { ClientMsg, EffectView, GameView, PlayerView } from '../../shared/protocol';
 import { cardEl, escapeHtml } from './card';
+import { isMuted, sfx, toggleMute } from './sound';
 
 interface Hud {
   root: HTMLElement;
@@ -57,6 +58,8 @@ export class GameScreen {
   private toastTimer = 0;
   private logList: HTMLElement;
   private lastWinner: GameView['winner'] = null;
+  private lastCount = 0;
+  private banner: HTMLElement;
   /** Cópia da carta que está a ser arrastada (tem de acompanhar a mana também). */
   private dragGhost: { index: number; el: HTMLElement } | null = null;
   private onKey = (e: KeyboardEvent) => {
@@ -77,7 +80,11 @@ export class GameScreen {
         <div class="zone-label">Área do adversário</div>
         <div class="effects"></div>
       </section>
-      <div class="midline"><span class="clock">0:00</span><button class="log-toggle" title="Histórico">📜</button></div>
+      <div class="midline">
+        <span class="clock">0:00</span>
+        <button class="icon-btn mute" title="Som"></button>
+        <button class="icon-btn log-toggle" title="Histórico">📜</button>
+      </div>
       <section class="board my-board">
         <div class="zone-label">A tua área</div>
         <div class="effects"></div>
@@ -90,6 +97,7 @@ export class GameScreen {
         ${HUD_HTML}
       </section>
       <div class="countdown" hidden></div>
+      <div class="opp-banner" hidden></div>
       </div>
       <aside class="log">
         <div class="log-head"><h3>Histórico</h3><button class="log-close" title="Fechar">✕</button></div>
@@ -122,6 +130,10 @@ export class GameScreen {
     this.countdown = q('.countdown');
     this.overlay = q('.overlay');
     this.toastEl = q('.toast');
+    this.banner = q('.opp-banner');
+    const mute = q('.mute');
+    mute.textContent = isMuted() ? '🔇' : '🔊';
+    mute.addEventListener('click', () => (mute.textContent = toggleMute() ? '🔇' : '🔊'));
 
     const hand = q('.hand');
     for (let i = 0; i < 4; i++) {
@@ -153,11 +165,25 @@ export class GameScreen {
 
     // Revanche: começa um histórico novo.
     if (view.winner === null && this.lastWinner !== null) this.logList.innerHTML = '<p class="log-empty">Ainda nada aconteceu.</p>';
+    if (view.winner !== null && this.lastWinner === null) {
+      if (view.winner === view.you) sfx.win();
+      else if (view.winner !== 'draw') sfx.lose();
+    }
     this.lastWinner = view.winner;
 
     this.clock.textContent = clockText(Math.max(0, view.time));
     this.countdown.hidden = view.time >= 0;
-    if (view.time < 0) this.countdown.textContent = String(Math.ceil(-view.time));
+    const count = view.time < 0 ? Math.ceil(-view.time) : 0;
+    if (count !== this.lastCount) {
+      if (count > 0) sfx.tick();
+      else sfx.go();
+      this.lastCount = count;
+    }
+    if (count) this.countdown.textContent = String(count);
+
+    const waiting = view.winner === null && view.opponentReconnectIn !== null;
+    this.banner.hidden = !waiting;
+    if (waiting) this.banner.textContent = `O adversário perdeu a ligação. Se não voltar em ${Math.ceil(view.opponentReconnectIn!)}s, ganhas.`;
 
     view.events.forEach((e) => this.handleEvent(e, view));
     this.updateOverlay(view);
@@ -190,7 +216,7 @@ export class GameScreen {
       (cell.firstElementChild as HTMLElement).style.width = locked ? '0' : `${fill * 100}%`;
     });
     hud.manaText.textContent = `${Math.floor(p.mana)}/${p.stats.maxMana}`;
-    hud.regen.textContent = `+${fmt(p.stats.manaRegen)}/s`;
+    hud.regen.textContent = p.stats.manaRegen > 0 ? `+1 a cada ${fmt(1 / p.stats.manaRegen)}s` : 'parada';
     hud.regen.classList.toggle('debuff', p.stats.manaRegen < p.base.manaRegen);
     hud.regen.classList.toggle('buff', p.stats.manaRegen > p.base.manaRegen);
   }
@@ -234,6 +260,7 @@ export class GameScreen {
     }
     if (v.me.mana < getCard(id).cost) {
       this.toast('Mana insuficiente');
+      sfx.error();
       this.shake(this.handSlots[index]);
       return false;
     }
@@ -358,6 +385,7 @@ export class GameScreen {
         splash.append(cardEl(e.cardId, 'mini'));
         board.root.append(splash);
         setTimeout(() => splash.remove(), 1200);
+        sfx.play();
         const who = mine(e.player) ? 'Tu' : escapeHtml(view.opp.name);
         const where = e.target === e.player ? '' : mine(e.target) ? ' em ti' : ' no adversário';
         this.log(view, e.cardId, `<b>${who}</b> jogou <b>${escapeHtml(getCard(e.cardId).name)}</b>${where}`, mine(e.player) ? 'me' : 'opp');
@@ -365,20 +393,26 @@ export class GameScreen {
       }
       case 'damage':
         this.float(mine(e.player) ? this.hud.me : this.hud.opp, `-${Math.round(e.amount)}`, 'dmg');
+        if (mine(e.player)) sfx.hitMe();
+        else sfx.hitOpp();
         break;
       case 'heal':
         this.float(mine(e.player) ? this.hud.me : this.hud.opp, `+${Math.round(e.amount)}`, 'heal');
+        sfx.heal();
         break;
       case 'manaLoss':
         this.float(mine(e.player) ? this.hud.me : this.hud.opp, `-${fmt(e.amount)} mana`, 'mana');
+        sfx.mana();
         break;
       case 'blocked': {
+        sfx.blocked();
         const name = escapeHtml(getCard(e.cardId).name);
         this.float(mine(e.player) ? this.hud.me : this.hud.opp, `Imune a ${getCard(e.cardId).name}!`, 'info');
         this.log(view, e.cardId, mine(e.player) ? `Estavas imune a <b>${name}</b>` : `O adversário estava imune a <b>${name}</b>`, 'info');
         break;
       }
       case 'cured': {
+        sfx.cured();
         const name = escapeHtml(getCard(e.cardId).name);
         this.float(mine(e.player) ? this.hud.me : this.hud.opp, `${getCard(e.cardId).name} passou!`, 'info');
         this.log(view, e.cardId, mine(e.player) ? `<b>${name}</b> passou-te sozinha` : `<b>${name}</b> passou ao adversário`, 'info');
@@ -392,7 +426,7 @@ export class GameScreen {
     this.logList.querySelector('.log-empty')?.remove();
     const el = document.createElement('div');
     el.className = `log-entry ${cls} type-${card.type}`;
-    el.title = `${card.name}: ${card.description}`;
+    el.dataset.card = cardId; // permite ver a carta em grande
     el.innerHTML = `<span class="log-time">${clockText(Math.max(0, view.time))}</span><span class="log-emoji">${card.emoji}</span><span class="log-text">${html}</span>`;
     this.logList.prepend(el);
     while (this.logList.children.length > 60) this.logList.lastElementChild!.remove();
@@ -420,13 +454,19 @@ export class GameScreen {
     const asked = view.rematch[view.you];
     const oppAsked = view.rematch[oppIdx];
     const note = !view.opponentConnected ? 'O adversário saiu.' : oppAsked ? 'O adversário quer revanche!' : '';
-    const key = `${cls}|${asked}|${note}`;
+    const d = view.ratingDelta;
+    const rating =
+      view.ranked && d !== null && view.rating !== null
+        ? `<p class="rating ${d >= 0 ? 'up' : 'down'}">Ranking: ${d >= 0 ? '+' : ''}${d} pontos · agora tens ${view.rating}</p>`
+        : '';
+    const key = `${cls}|${asked}|${note}|${rating}`;
     if (this.overlay.dataset.key === key && !this.overlay.hidden) return;
     this.overlay.dataset.key = key;
 
     this.overlay.innerHTML = `
       <div class="result ${cls}">
         <h2>${title}</h2>
+        ${rating}
         <p>${escapeHtml(note)}</p>
         <div class="row">
           ${view.opponentConnected ? `<button class="btn primary" id="rematch" ${asked ? 'disabled' : ''}>${asked ? 'À espera…' : 'Revanche'}</button>` : ''}

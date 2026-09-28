@@ -11,6 +11,6 @@ export const CONFIG = {
   baseStats: {
     maxHp: 100,
     maxMana: 10,
-    manaRegen: 1, // mana por segundo
+    manaRegen: 1 / 1.5, // mana por segundo (1 a cada 1,5s)
   } satisfies Stats,
 };
