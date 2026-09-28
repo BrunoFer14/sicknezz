@@ -31,6 +31,14 @@ const HUD_HTML = `
   </div>`;
 
 const fmt = (n: number) => String(Math.round(n * 100) / 100).replace('.', ',');
+const clockText = (t: number) => `${Math.floor(t / 60)}:${String(Math.floor(t % 60)).padStart(2, '0')}`;
+
+/** Escurece a carta enquanto não há mana suficiente para a jogar. */
+function showCharge(cardNode: HTMLElement, mana: number, cost: number) {
+  const ready = mana >= cost;
+  cardNode.classList.toggle('unaffordable', !ready);
+  (cardNode.querySelector('.charge') as HTMLElement).style.height = `${ready ? 0 : (1 - mana / cost) * 100}%`;
+}
 
 export class GameScreen {
   private root = document.createElement('div');
@@ -47,6 +55,10 @@ export class GameScreen {
   private overlay: HTMLElement;
   private toastEl: HTMLElement;
   private toastTimer = 0;
+  private logList: HTMLElement;
+  private lastWinner: GameView['winner'] = null;
+  /** Cópia da carta que está a ser arrastada (tem de acompanhar a mana também). */
+  private dragGhost: { index: number; el: HTMLElement } | null = null;
   private onKey = (e: KeyboardEvent) => {
     const n = Number(e.key);
     if (n >= 1 && n <= this.handSlots.length) this.tryPlay(n - 1);
@@ -57,14 +69,15 @@ export class GameScreen {
     private send: (msg: ClientMsg) => void,
     private onExit: () => void,
   ) {
-    this.root.className = 'game';
+    this.root.className = 'game-wrap';
     this.root.innerHTML = `
+      <div class="game">
       <section class="side opp">${HUD_HTML}<div class="opp-hand"></div></section>
       <section class="board opp-board">
         <div class="zone-label">Área do adversário</div>
         <div class="effects"></div>
       </section>
-      <div class="midline"><span class="clock">0:00</span></div>
+      <div class="midline"><span class="clock">0:00</span><button class="log-toggle" title="Histórico">📜</button></div>
       <section class="board my-board">
         <div class="zone-label">A tua área</div>
         <div class="effects"></div>
@@ -77,6 +90,11 @@ export class GameScreen {
         ${HUD_HTML}
       </section>
       <div class="countdown" hidden></div>
+      </div>
+      <aside class="log">
+        <div class="log-head"><h3>Histórico</h3><button class="log-close" title="Fechar">✕</button></div>
+        <div class="log-list"><p class="log-empty">Ainda nada aconteceu.</p></div>
+      </aside>
       <div class="overlay" hidden></div>
       <div class="toast"></div>`;
 
@@ -94,6 +112,10 @@ export class GameScreen {
 
     this.hud = { me: makeHud(q('.side.me')), opp: makeHud(q('.side.opp')) };
     this.board = { me: makeBoard(q('.my-board')), opp: makeBoard(q('.opp-board')) };
+    this.logList = q('.log-list');
+    const log = q('.log');
+    q('.log-toggle').addEventListener('click', () => log.classList.toggle('open'));
+    q('.log-close').addEventListener('click', () => log.classList.remove('open'));
     this.oppHand = q('.opp-hand');
     this.nextSlot = q('.next-slot');
     this.clock = q('.clock');
@@ -129,8 +151,11 @@ export class GameScreen {
     this.syncEffects(this.board.me, view.me.effects);
     this.syncEffects(this.board.opp, view.opp.effects);
 
-    const t = Math.max(0, view.time);
-    this.clock.textContent = `${Math.floor(t / 60)}:${String(Math.floor(t % 60)).padStart(2, '0')}`;
+    // Revanche: começa um histórico novo.
+    if (view.winner === null && this.lastWinner !== null) this.logList.innerHTML = '<p class="log-empty">Ainda nada aconteceu.</p>';
+    this.lastWinner = view.winner;
+
+    this.clock.textContent = clockText(Math.max(0, view.time));
     this.countdown.hidden = view.time >= 0;
     if (view.time < 0) this.countdown.textContent = String(Math.ceil(-view.time));
 
@@ -183,11 +208,9 @@ export class GameScreen {
         el.insertAdjacentHTML('beforeend', `<div class="key">[${i + 1}]</div>`);
         slot.replaceChildren(el);
       }
-      const cardNode = slot.firstElementChild as HTMLElement;
       const cost = getCard(id).cost;
-      const ready = mana >= cost;
-      cardNode.classList.toggle('unaffordable', !ready);
-      (cardNode.querySelector('.charge') as HTMLElement).style.height = `${ready ? 0 : (1 - mana / cost) * 100}%`;
+      showCharge(slot.firstElementChild as HTMLElement, mana, cost);
+      if (this.dragGhost?.index === i) showCharge(this.dragGhost.el, mana, cost);
     });
     if (this.nextId !== next) {
       this.nextId = next;
@@ -248,6 +271,7 @@ export class GameScreen {
       const moveGhost = (x: number, y: number) => (ghost.style.transform = `translate(${x - offX}px, ${y - offY}px) rotate(-4deg) scale(1.05)`);
       moveGhost(down.clientX, down.clientY);
       document.body.append(ghost);
+      this.dragGhost = { index, el: ghost };
 
       slot.classList.add('dragging');
       zone.classList.add('drop-target');
@@ -264,6 +288,7 @@ export class GameScreen {
         window.removeEventListener('pointermove', move);
         window.removeEventListener('pointerup', end);
         window.removeEventListener('pointercancel', end);
+        this.dragGhost = null;
         slot.classList.remove('dragging');
         zone.classList.remove('drop-target', 'drop-hover');
 
@@ -296,21 +321,21 @@ export class GameScreen {
       alive.add(e.id);
       let el = board.els.get(e.id);
       if (!el) {
-        const card = getCard(e.cardId);
         el = document.createElement('div');
-        el.className = `effect type-${card.type} ${e.hostile ? 'hostile' : 'friendly'}`;
-        el.innerHTML = `
-          <span class="e-emoji">${card.emoji}</span>
-          <div class="e-body">
-            <span class="e-name">${escapeHtml(card.name)}</span>
-            ${e.duration === null ? '<span class="e-perm">permanente</span>' : '<div class="e-timer"><div class="e-fill"></div></div>'}
-          </div>`;
-        el.title = card.description;
+        el.className = `effect-card type-${getCard(e.cardId).type} ${e.hostile ? 'hostile' : 'friendly'}`;
+        el.append(cardEl(e.cardId));
+        el.insertAdjacentHTML(
+          'beforeend',
+          e.duration === null
+            ? '<div class="e-time perm">Permanente</div>'
+            : '<div class="e-timer"><div class="e-fill"></div></div><div class="e-time"></div>',
+        );
         board.effects.append(el);
         board.els.set(e.id, el);
       }
       if (e.remaining !== null && e.duration) {
         (el.querySelector('.e-fill') as HTMLElement).style.width = `${(e.remaining / e.duration) * 100}%`;
+        (el.querySelector('.e-time') as HTMLElement).textContent = `${Math.ceil(e.remaining)}s`;
       }
     }
     for (const [id, el] of board.els) {
@@ -333,6 +358,9 @@ export class GameScreen {
         splash.append(cardEl(e.cardId, 'mini'));
         board.root.append(splash);
         setTimeout(() => splash.remove(), 1200);
+        const who = mine(e.player) ? 'Tu' : escapeHtml(view.opp.name);
+        const where = e.target === e.player ? '' : mine(e.target) ? ' em ti' : ' no adversário';
+        this.log(view, e.cardId, `<b>${who}</b> jogou <b>${escapeHtml(getCard(e.cardId).name)}</b>${where}`, mine(e.player) ? 'me' : 'opp');
         break;
       }
       case 'damage':
@@ -344,13 +372,30 @@ export class GameScreen {
       case 'manaLoss':
         this.float(mine(e.player) ? this.hud.me : this.hud.opp, `-${fmt(e.amount)} mana`, 'mana');
         break;
-      case 'blocked':
+      case 'blocked': {
+        const name = escapeHtml(getCard(e.cardId).name);
         this.float(mine(e.player) ? this.hud.me : this.hud.opp, `Imune a ${getCard(e.cardId).name}!`, 'info');
+        this.log(view, e.cardId, mine(e.player) ? `Estavas imune a <b>${name}</b>` : `O adversário estava imune a <b>${name}</b>`, 'info');
         break;
-      case 'cured':
+      }
+      case 'cured': {
+        const name = escapeHtml(getCard(e.cardId).name);
         this.float(mine(e.player) ? this.hud.me : this.hud.opp, `${getCard(e.cardId).name} passou!`, 'info');
+        this.log(view, e.cardId, mine(e.player) ? `<b>${name}</b> passou-te sozinha` : `<b>${name}</b> passou ao adversário`, 'info');
         break;
+      }
     }
+  }
+
+  private log(view: GameView, cardId: string, html: string, cls: 'me' | 'opp' | 'info') {
+    const card = getCard(cardId);
+    this.logList.querySelector('.log-empty')?.remove();
+    const el = document.createElement('div');
+    el.className = `log-entry ${cls} type-${card.type}`;
+    el.title = `${card.name}: ${card.description}`;
+    el.innerHTML = `<span class="log-time">${clockText(Math.max(0, view.time))}</span><span class="log-emoji">${card.emoji}</span><span class="log-text">${html}</span>`;
+    this.logList.prepend(el);
+    while (this.logList.children.length > 60) this.logList.lastElementChild!.remove();
   }
 
   private float(hud: Hud, text: string, cls: string) {
