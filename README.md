@@ -32,7 +32,7 @@ Estes valores estão em [shared/engine/config.ts](shared/engine/config.ts).
 
 | Tipo           | Estilo                                    | Cura           |
 |----------------|-------------------------------------------|----------------|
-| 🦠 Vírus       | dano ao longo do tempo                    | Vacina         |
+| 🦠 Vírus       | dano ao longo do tempo                    | Hospital (a Vacina só previne) |
 | 🧫 Bactéria    | dano que escala com outras doenças        | Antibiótico    |
 | 🍔 Física      | enfraquece de forma permanente (mana, vida) | Exercício    |
 | 🧠 Mental      | ataca a mana                              | Terapia        |
@@ -44,7 +44,7 @@ Sinergias atuais:
 - A Pneumonia faz mais dano por cada vírus ativo no adversário.
 - A Diabetes faz mais dano por cada doença física ativa.
 - A Sépsis faz mais dano por cada doença de qualquer tipo.
-- A Vacina dá imunidade temporária a vírus.
+- A Vacina dá imunidade temporária a novos vírus (não cura os que já tens).
 
 Os tipos estão definidos em `CardType` ([types.ts](shared/engine/types.ts)) e `CARD_TYPES` ([cards.ts](shared/cards.ts)).
 
@@ -109,7 +109,7 @@ O TypeScript valida os `params` de cada mecânica, e o editor dá autocomplete. 
 | `statModifier`      | `stat`, `op` (add/mul/set), `value`, `duration?`  | Obesidade, Asma, Café |
 | `drainMana`         | `amount`                                          | Enxaqueca             |
 | `drainManaOverTime` | `amount`, `duration`                              | Ansiedade             |
-| `cleanse`           | `types?`                                          | Vacina, Exercício     |
+| `cleanse`           | `types?`                                          | Antibiótico, Exercício |
 | `immunity`          | `types`, `duration`                               | Vacina                |
 
 Stats que se podem modificar: `maxHp`, `maxMana`, `manaRegen`. Se o `statModifier` não tiver `duration`, o efeito é permanente. O mesmo acontece com o `infection` sem `total`.
