@@ -1,6 +1,6 @@
 // Mensagens trocadas entre cliente e servidor + a "vista" do jogo que cada jogador recebe.
 import { computeStats } from './engine/stats';
-import { cardCost } from './engine/game';
+import { cardCost, maxPlayableCost } from './engine/game';
 import type { GameEvent, GameState, PlayerIndex, PlayerState, Side, Stats } from './engine/types';
 
 export type ClientMsg =
@@ -48,7 +48,16 @@ export interface GameView {
   you: PlayerIndex;
   winner: PlayerIndex | 'draw' | null;
   /** `costs`: custo atual de cada carta da mão; `borrowed`: cartas emprestadas pelo Alzheimer. */
-  me: PlayerView & { hand: string[]; costs: number[]; borrowed: boolean[]; next: string };
+  me: PlayerView & {
+    hand: string[];
+    costs: number[];
+    borrowed: boolean[];
+    next: string;
+    /** Custo máximo que podes jogar agora (Fratura), ou null. */
+    maxCost: number | null;
+    /** Paranoia: não vês as tuas doenças. */
+    blind: boolean;
+  };
   /** O adversário não vê as tuas cartas, só quantas tens. */
   opp: PlayerView & { handCount: number };
   events: GameEvent[];
@@ -138,16 +147,26 @@ export function makeView(state: GameState, you: PlayerIndex, events: GameEvent[]
   const oi: PlayerIndex = you === 0 ? 1 : 0;
   const me = state.players[you];
   const opp = state.players[oi];
+  const mine = playerView(me, you);
+  // Paranoia: escondem-se as tuas doenças (menos a própria Paranoia) e as cartas que o adversário te jogou.
+  const blindPlays = new Set(me.effects.filter((e) => e.mechanic === 'blind' && e.source !== you).map((e) => e.playId));
+  const blind = blindPlays.size > 0;
+  if (blind) {
+    mine.effects = mine.effects.filter((e) => !e.hostile || blindPlays.has(e.id));
+    events = events.filter((e) => !(e.type === 'played' && e.player !== you && e.target === you) && !(e.type === 'cured' && e.player === you));
+  }
   return {
     time: state.time,
     you,
     winner: state.winner,
     me: {
-      ...playerView(me, you),
+      ...mine,
       hand: [...me.hand],
       costs: me.hand.map((id) => cardCost(me, id)),
       borrowed: [...me.borrowed],
       next: me.deck[0] ?? me.hand[0],
+      maxCost: maxPlayableCost(me),
+      blind,
     },
     opp: { ...playerView(opp, oi), handCount: opp.hand.length },
     events,

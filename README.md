@@ -105,15 +105,23 @@ O TypeScript valida os `params` de cada mecânica, e o editor dá autocomplete. 
 |---------------------|---------------------------------------------------|-----------------------|
 | `damage`            | `amount`                                          | Salmonela             |
 | `damagePerDisease`  | `base`, `per`, `type?`                            | Pneumonia, Sépsis     |
-| `heal`              | `amount`                                          | Exercício             |
+| `heal`              | `amount`                                          | Hospital              |
 | `damageOverTime`    | `amount`, `duration`                              | Gripe, Covid          |
 | `healOverTime`      | `amount`, `duration`                              | Vitaminas             |
-| `infection`         | `perSecond`, `total?`, `cureChance?`              | Ébola, Herpes         |
+| `infection`         | `perSecond`, `total?`, `cureChance?`, `cureInterval?` | Ébola, Herpes    |
 | `statModifier`      | `stat`, `op` (add/mul/set), `value`, `duration?`  | Obesidade, Asma, Café |
 | `drainMana`         | `amount`                                          | Enxaqueca             |
 | `drainManaOverTime` | `amount`, `duration`                              | Ansiedade             |
 | `cleanse`           | `types?`                                          | Antibiótico, Exercício |
-| `immunity`          | `types`, `duration`                               | Vacina                |
+| `immunity`          | `types`, `duration`                               | Vacina, Máscara       |
+| `gainManaOverTime`  | `amount`, `duration`                              | Soro                  |
+| `drainManaAbove`    | `keep`                                            | Burnout               |
+| `costIncrease`      | `types`, `amount`                                 | Alergia               |
+| `costLimit`         | `max`, `duration`                                 | Fratura               |
+| `moodSwing`         | `strong`, `weak`, `phase`, `duration`             | Bipolaridade          |
+| `shuffleHand`       | —                                                 | Alzheimer             |
+| `forgetBest`        | —                                                 | Amnésia               |
+| `blind`             | `duration`                                        | Paranoia              |
 
 Stats que se podem modificar: `maxHp`, `maxMana`, `manaRegen`. Se o `statModifier` não tiver `duration`, o efeito é permanente. O mesmo acontece com o `infection` sem `total`.
 

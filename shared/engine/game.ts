@@ -49,6 +49,16 @@ export function cardCost(p: PlayerState, cardId: string): number {
   return Math.max(0, cost);
 }
 
+/** Custo máximo que o jogador pode jogar agora (ex.: Fratura), ou null se não houver limite. */
+export function maxPlayableCost(p: PlayerState): number | null {
+  let max: number | null = null;
+  for (const e of p.effects) {
+    const m = getMechanic(e.mechanic).maxCost?.(e.params);
+    if (m !== undefined) max = max === null ? m : Math.min(max, m);
+  }
+  return max;
+}
+
 /** `side`: área onde a carta foi largada; só conta para cartas com alvo 'any' (por omissão, o adversário). */
 export function playCard(state: GameState, player: PlayerIndex, handIndex: number, side: Side = 'opponent'): PlayResult {
   if (state.winner !== null) return { ok: false, reason: 'O jogo terminou.' };
@@ -59,6 +69,8 @@ export function playCard(state: GameState, player: PlayerIndex, handIndex: numbe
   const card = getCard(cardId);
   const cost = cardCost(p, cardId);
   if (p.mana < cost) return { ok: false, reason: 'Mana insuficiente.' };
+  const max = maxPlayableCost(p);
+  if (max !== null && cost > max) return { ok: false, reason: `Só podes jogar cartas até custo ${max}.` };
 
   p.mana -= cost;
   // Ciclo estilo Clash Royale: a carta jogada vai para o fim da fila e entra a próxima.

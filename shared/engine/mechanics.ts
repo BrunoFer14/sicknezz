@@ -35,6 +35,8 @@ export interface MechanicDef<P> {
   costDelta?: (params: P, cardType: CardType) => number;
   /** Chamado quando o dono do efeito joga uma carta (depois de pagar). Pode pôr `effect.ended = true`. */
   onOwnerPlay?: (params: P, effect: ActiveEffect, cardType: CardType) => void;
+  /** Custo máximo das cartas que o dono do efeito pode jogar enquanto está ativo. */
+  maxCost?: (params: P) => number;
 }
 
 function defineMechanic<P>(def: MechanicDef<P>): MechanicDef<P> {
@@ -139,6 +141,46 @@ export const MECHANICS = {
   /** Retira mana ao longo do tempo. */
   drainManaOverTime: overTime(({ state, target }, n) => drainMana(state, target, n)),
 
+  /** Retira a mana acima de `keep`. */
+  drainManaAbove: defineMechanic<{ keep: number }>({
+    onApply: ({ state, target }, p) => drainMana(state, target, state.players[target].mana - p.keep),
+  }),
+
+  /**
+   * A regeneração de mana oscila a cada `phase` segundos.
+   * Em quem joga: +strong, −weak, +strong...  No adversário: −strong, +weak, −strong...
+   */
+  moodSwing: defineMechanic<{ strong: number; weak: number; phase: number; duration: number }>({
+    duration: (p) => p.duration,
+    onApply: (ctx, p, e) => setMood(ctx, p, e!),
+    onTick: (ctx, p, e) => setMood(ctx, p, e),
+  }),
+
+  /** A carta mais cara da mão do alvo vai para o fim da fila e entra a próxima. */
+  forgetBest: defineMechanic<Record<string, never>>({
+    onApply: ({ state, target }) => {
+      const pl = state.players[target];
+      let best = 0;
+      pl.hand.forEach((id, i) => {
+        if (getCard(id).cost > getCard(pl.hand[best]).cost) best = i;
+      });
+      if (!pl.borrowed[best]) pl.deck.push(pl.hand[best]);
+      pl.hand[best] = pl.deck.shift()!;
+      pl.borrowed[best] = false;
+    },
+  }),
+
+  /** O alvo deixa de ver as suas doenças durante `duration` segundos (tratado na vista, shared/protocol.ts). */
+  blind: defineMechanic<{ duration: number }>({
+    duration: (p) => p.duration,
+  }),
+
+  /** Durante `duration` segundos o alvo só pode jogar cartas até custo `max`. */
+  costLimit: defineMechanic<{ max: number; duration: number }>({
+    duration: (p) => p.duration,
+    maxCost: (p) => p.max,
+  }),
+
   /** Dá mana ao longo do tempo. */
   gainManaOverTime: overTime(({ state, target }, n) => gainMana(state, target, n)),
 
@@ -185,6 +227,13 @@ export const MECHANICS = {
     blocks: (p) => p.types,
   }),
 } satisfies Record<string, MechanicDef<any>>;
+
+function setMood(ctx: MechanicContext, p: { strong: number; weak: number; phase: number }, e: ActiveEffect) {
+  const high = Math.floor(e.elapsed / p.phase) % 2 === 0;
+  const up = ctx.source === ctx.target ? high : !high;
+  const value = ctx.source === ctx.target ? (up ? 1 + p.strong : 1 - p.weak) : up ? 1 + p.weak : 1 - p.strong;
+  e.modifiers = [{ stat: 'manaRegen', op: 'mul', value }];
+}
 
 export type MechanicId = keyof typeof MECHANICS;
 

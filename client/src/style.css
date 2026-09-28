@@ -578,3 +578,22 @@ input:focus { outline: none; border-color: var(--toxic); }
 /* Custo aumentado (ex.: Alergia) e cartas emprestadas pelo Alzheimer. */
 .card.taxed .cost { background: #d94848; color: #fff; }
 .card.borrowed { outline: 2px dashed rgba(200, 160, 255, .8); outline-offset: -3px; }
+
+/* Fratura: cartas acima do custo permitido. */
+.card.locked { filter: grayscale(1) brightness(.6); }
+.card.locked::after { content: '🦴'; position: absolute; inset: 0; display: grid; place-items: center; font-size: 28px; }
+/* Paranoia: névoa sobre a tua área. */
+.board .fog { display: none; }
+.board.blind .fog {
+  display: grid;
+  place-items: center;
+  position: absolute;
+  inset: 0;
+  border-radius: 14px;
+  background: rgba(40, 20, 60, .55);
+  backdrop-filter: blur(6px);
+  color: #e6d6ff;
+  font-weight: 700;
+  pointer-events: none;
+  z-index: 2;
+}

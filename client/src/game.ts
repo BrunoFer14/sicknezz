@@ -88,6 +88,7 @@ export class GameScreen {
       <section class="board my-board">
         <div class="zone-label">A tua área</div>
         <div class="effects"></div>
+        <div class="fog">👁️ Paranoia: não vês as tuas doenças</div>
       </section>
       <section class="side me">
         <div class="hand-row">
@@ -161,6 +162,7 @@ export class GameScreen {
     this.updateHand(view);
     this.updateOppHand(view.opp.handCount);
     this.syncEffects(this.board.me, view.me.effects);
+    this.board.me.root.classList.toggle('blind', view.me.blind);
     this.syncEffects(this.board.opp, view.opp.effects);
 
     // Revanche: começa um histórico novo.
@@ -224,7 +226,7 @@ export class GameScreen {
   // ---------- Mão ----------
 
   private updateHand(view: GameView) {
-    const { hand, mana, next, costs, borrowed } = view.me;
+    const { hand, mana, next, costs, borrowed, maxCost } = view.me;
     hand.forEach((id, i) => {
       const slot = this.handSlots[i];
       if (this.handIds[i] !== id) {
@@ -240,6 +242,7 @@ export class GameScreen {
       (el.querySelector('.cost') as HTMLElement).textContent = String(cost);
       el.classList.toggle('taxed', cost > getCard(id).cost);
       el.classList.toggle('borrowed', borrowed[i]);
+      el.classList.toggle('locked', maxCost !== null && cost > maxCost);
       showCharge(el, mana, cost);
       if (this.dragGhost?.index === i) showCharge(this.dragGhost.el, mana, cost);
     });
@@ -261,6 +264,12 @@ export class GameScreen {
     if (!v || !id || v.winner !== null) return false;
     if (v.time < 0) {
       this.toast('Espera pelo início do jogo!');
+      return false;
+    }
+    if (v.me.maxCost !== null && v.me.costs[index] > v.me.maxCost) {
+      this.toast(`Fratura: só podes jogar cartas até custo ${v.me.maxCost}`);
+      sfx.error();
+      this.shake(this.handSlots[index]);
       return false;
     }
     if (v.me.mana < v.me.costs[index]) {
