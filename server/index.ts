@@ -165,7 +165,7 @@ wss.on('connection', (ws) => {
         break;
       }
       case 'play':
-        if (Number.isInteger(msg.handIndex)) conn.room?.play(conn.index, msg.handIndex);
+        if (Number.isInteger(msg.handIndex)) conn.room?.play(conn.index, msg.handIndex, msg.side === 'self' ? 'self' : 'opponent');
         break;
       case 'rematch':
         conn.room?.requestRematch(conn.index);

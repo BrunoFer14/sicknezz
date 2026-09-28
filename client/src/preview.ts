@@ -16,7 +16,7 @@ function show(cardId: string, x: number) {
   el.append(cardEl(cardId));
   el.insertAdjacentHTML(
     'beforeend',
-    `<div class="preview-info">${type.emoji} ${escapeHtml(type.name)} · custa ${card.cost} de mana · joga-se ${card.target === 'self' ? 'na tua área' : 'no adversário'}</div>`,
+    `<div class="preview-info">${type.emoji} ${escapeHtml(type.name)} · custa ${card.cost} de mana · joga-se ${card.target === 'self' ? 'na tua área' : card.target === 'any' ? 'em qualquer área' : 'no adversário'}</div>`,
   );
   document.body.append(el);
   current = cardId;

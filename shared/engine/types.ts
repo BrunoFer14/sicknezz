@@ -4,7 +4,7 @@ export type PlayerIndex = 0 | 1;
 export type CardType = 'virus' | 'bacteria' | 'fisica' | 'mental' | 'tratamento';
 
 /** Stats que as cartas podem modificar. Para um stat novo, adiciona-o aqui e em CONFIG.baseStats. */
-export type StatName = 'maxHp' | 'maxMana' | 'manaRegen';
+export type StatName = 'maxHp' | 'maxMana' | 'manaRegen' | 'virusDamageTaken' | 'bacteriaDamageTaken';
 export type Stats = Record<StatName, number>;
 
 export interface StatModifier {
@@ -14,8 +14,11 @@ export interface StatModifier {
   value: number;
 }
 
-/** Onde a carta atua, relativo a quem a jogou. */
-export type TargetKind = 'opponent' | 'self';
+/** Onde a carta atua, relativo a quem a jogou. 'any': quem joga escolhe a área onde a larga. */
+export type TargetKind = 'opponent' | 'self' | 'any';
+
+/** Área onde uma carta 'any' foi largada. */
+export type Side = 'opponent' | 'self';
 
 /** Um efeito que ficou ativo num jogador (ex.: gripe a meio de fazer dano). */
 export interface ActiveEffect {
@@ -48,6 +51,8 @@ export interface PlayerState {
   /** Fila de cartas: deck[0] é a próxima a entrar na mão. */
   deck: string[];
   hand: string[];
+  /** Cartas da mão que vieram de fora do baralho (Alzheimer): quando jogadas desaparecem em vez de voltar à fila. */
+  borrowed: boolean[];
   effects: ActiveEffect[];
 }
 
@@ -67,4 +72,6 @@ export interface GameState {
   winner: PlayerIndex | 'draw' | null;
   nextUid: number;
   events: GameEvent[];
+  /** Todas as cartas dos baralhos dos dois jogadores (sem repetidos). */
+  pool: string[];
 }

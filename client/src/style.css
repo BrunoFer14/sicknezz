@@ -557,3 +557,7 @@ input:focus { outline: none; border-color: var(--toxic); }
   z-index: 60;
 }
 .toast.show { opacity: 1; transform: translate(-50%, 0); }
+
+/* Custo aumentado (ex.: Alergia) e cartas emprestadas pelo Alzheimer. */
+.card.taxed .cost { background: #d94848; color: #fff; }
+.card.borrowed { outline: 2px dashed rgba(200, 160, 255, .8); outline-offset: -3px; }

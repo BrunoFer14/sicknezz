@@ -2,7 +2,7 @@ import { getCard, type CardDef } from '../cards';
 import { CONFIG } from './config';
 import { getMechanic, type EffectSpec, type MechanicContext } from './mechanics';
 import { computeStats } from './stats';
-import type { ActiveEffect, CardType, GameState, PlayerIndex, PlayerState, TargetKind } from './types';
+import type { ActiveEffect, CardType, GameState, PlayerIndex, PlayerState, Side, TargetKind } from './types';
 
 export const other = (i: PlayerIndex): PlayerIndex => (i === 0 ? 1 : 0);
 
@@ -22,6 +22,7 @@ function createPlayer(name: string, deck: readonly string[]): PlayerState {
     mana: CONFIG.startingMana,
     base: { ...CONFIG.baseStats },
     hand: cards.splice(0, CONFIG.handSize),
+    borrowed: new Array(CONFIG.handSize).fill(false),
     deck: cards,
     effects: [],
   };
@@ -34,34 +35,58 @@ export function createGame(names: [string, string], decks: [readonly string[], r
     winner: null,
     nextUid: 1,
     events: [],
+    pool: [...new Set([...decks[0], ...decks[1]])],
   };
 }
 
 export type PlayResult = { ok: true } | { ok: false; reason: string };
 
-export function playCard(state: GameState, player: PlayerIndex, handIndex: number): PlayResult {
+/** Custo atual de uma carta para este jogador (ex.: a Alergia encarece os tratamentos). */
+export function cardCost(p: PlayerState, cardId: string): number {
+  const card = getCard(cardId);
+  let cost = card.cost;
+  for (const e of p.effects) cost += getMechanic(e.mechanic).costDelta?.(e.params, card.type) ?? 0;
+  return Math.max(0, cost);
+}
+
+/** `side`: área onde a carta foi largada; só conta para cartas com alvo 'any' (por omissão, o adversário). */
+export function playCard(state: GameState, player: PlayerIndex, handIndex: number, side: Side = 'opponent'): PlayResult {
   if (state.winner !== null) return { ok: false, reason: 'O jogo terminou.' };
   if (state.time < 0) return { ok: false, reason: 'O jogo ainda não começou.' };
   const p = state.players[player];
   const cardId = p.hand[handIndex];
   if (!cardId) return { ok: false, reason: 'Carta inválida.' };
   const card = getCard(cardId);
-  if (p.mana < card.cost) return { ok: false, reason: 'Mana insuficiente.' };
+  const cost = cardCost(p, cardId);
+  if (p.mana < cost) return { ok: false, reason: 'Mana insuficiente.' };
 
-  p.mana -= card.cost;
+  p.mana -= cost;
   // Ciclo estilo Clash Royale: a carta jogada vai para o fim da fila e entra a próxima.
-  p.deck.push(cardId);
+  // As cartas emprestadas (Alzheimer) não voltam à fila.
+  if (!p.borrowed[handIndex]) p.deck.push(cardId);
   p.hand[handIndex] = p.deck.shift()!;
+  p.borrowed[handIndex] = false;
 
-  state.events.push({ type: 'played', player, cardId, target: resolveTarget(player, card.target) });
+  // Efeitos no próprio jogador que reagem às cartas que ele joga (ex.: a Alergia desaparece com um tratamento).
+  for (const e of [...p.effects]) getMechanic(e.mechanic).onOwnerPlay?.(e.params, e, card.type);
+  p.effects = p.effects.filter((e) => !e.ended);
+
+  state.events.push({ type: 'played', player, cardId, target: resolveTarget(player, card.target, side) });
   const playId = state.nextUid++;
   const blocked = new Set<PlayerIndex>();
+  const replaced = new Set<PlayerIndex>();
   for (const spec of card.effects) {
-    const target = resolveTarget(player, spec.target ?? card.target);
+    const target = resolveTarget(player, spec.target ?? card.target, side);
     if (target !== player && isImmune(state.players[target], card.type)) {
       if (!blocked.has(target)) state.events.push({ type: 'blocked', player: target, cardId });
       blocked.add(target);
       continue;
+    }
+    // Nada acumula: jogar outra vez a mesma carta substitui (e reinicia) a anterior.
+    if (!replaced.has(target)) {
+      const t = state.players[target];
+      t.effects = t.effects.filter((e) => !(e.cardId === cardId && e.source === player));
+      replaced.add(target);
     }
     applyEffect(state, player, target, cardId, card, spec, playId);
   }
@@ -69,7 +94,8 @@ export function playCard(state: GameState, player: PlayerIndex, handIndex: numbe
   return { ok: true };
 }
 
-function resolveTarget(source: PlayerIndex, kind: TargetKind): PlayerIndex {
+function resolveTarget(source: PlayerIndex, kind: TargetKind, side: Side): PlayerIndex {
+  if (kind === 'any') kind = side;
   return kind === 'self' ? source : other(source);
 }
 
@@ -79,7 +105,7 @@ function isImmune(p: PlayerState, type: CardType): boolean {
 
 function applyEffect(state: GameState, source: PlayerIndex, target: PlayerIndex, cardId: string, card: CardDef, spec: EffectSpec, playId: number) {
   const mech = getMechanic(spec.mechanic);
-  const ctx: MechanicContext = { state, target, source };
+  const ctx: MechanicContext = { state, target, source, cardType: card.type };
 
   if (!mech.duration) {
     mech.onApply?.(ctx, spec.params, null);
@@ -117,7 +143,7 @@ export function tick(state: GameState, dt: number) {
     for (const e of [...p.effects]) {
       if (!p.effects.includes(e)) continue; // removido por outro efeito neste tick
       const mech = getMechanic(e.mechanic);
-      const ctx: MechanicContext = { state, target, source: e.source };
+      const ctx: MechanicContext = { state, target, source: e.source, cardType: e.cardType };
       e.elapsed += dt;
       mech.onTick?.(ctx, e.params, e, dt);
       if (e.ended || (e.duration !== null && e.elapsed >= e.duration)) {

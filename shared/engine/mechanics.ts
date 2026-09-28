@@ -1,7 +1,9 @@
 // MECÂNICAS: os blocos reutilizáveis com que as cartas são feitas.
 // Para criar uma mecânica nova, adiciona uma entrada a MECHANICS. O tipo dos params
 // fica automaticamente disponível (com autocomplete) na definição das cartas.
-import { countDiseases, damage, drainMana, heal } from './actions';
+import { getCard } from '../cards';
+import { CONFIG } from './config';
+import { countDiseases, damage, drainMana, gainMana, heal } from './actions';
 import type { ActiveEffect, CardType, GameState, PlayerIndex, StatModifier, StatName, TargetKind } from './types';
 
 export interface MechanicContext {
@@ -10,6 +12,8 @@ export interface MechanicContext {
   target: PlayerIndex;
   /** Jogador que jogou a carta. */
   source: PlayerIndex;
+  /** Tipo da carta que criou o efeito. */
+  cardType: CardType;
 }
 
 export interface MechanicDef<P> {
@@ -27,6 +31,10 @@ export interface MechanicDef<P> {
   /** Pode pôr `effect.ended = true` para terminar o efeito mais cedo. */
   onTick?: (ctx: MechanicContext, params: P, effect: ActiveEffect, dt: number) => void;
   onExpire?: (ctx: MechanicContext, params: P, effect: ActiveEffect) => void;
+  /** Quanto muda o custo das cartas deste tipo para o dono do efeito. */
+  costDelta?: (params: P, cardType: CardType) => number;
+  /** Chamado quando o dono do efeito joga uma carta (depois de pagar). Pode pôr `effect.ended = true`. */
+  onOwnerPlay?: (params: P, effect: ActiveEffect, cardType: CardType) => void;
 }
 
 function defineMechanic<P>(def: MechanicDef<P>): MechanicDef<P> {
@@ -53,19 +61,21 @@ type InfectionParams = {
   perSecond: number;
   /** Dano total até acabar. Sem total, dura até ser curada. */
   total?: number;
-  /** Probabilidade (0–1), a cada segundo, de a doença passar sozinha. */
+  /** Probabilidade (0–1), a cada `cureInterval` segundos, de a doença passar sozinha. */
   cureChance?: number;
+  /** Segundos entre cada tentativa de cura (por omissão 1). */
+  cureInterval?: number;
 };
 
 export const MECHANICS = {
   /** Dano imediato. */
   damage: defineMechanic<{ amount: number }>({
-    onApply: ({ state, target }, p) => damage(state, target, p.amount),
+    onApply: ({ state, target, cardType }, p) => damage(state, target, p.amount, cardType),
   }),
 
   /** Dano imediato: `base` + `per` por cada doença ativa no alvo (opcionalmente só de um tipo). */
   damagePerDisease: defineMechanic<{ base: number; per: number; type?: CardType }>({
-    onApply: ({ state, target }, p) => damage(state, target, p.base + p.per * countDiseases(state, target, p.type)),
+    onApply: ({ state, target, cardType }, p) => damage(state, target, p.base + p.per * countDiseases(state, target, p.type), cardType),
   }),
 
   /** Cura imediata. */
@@ -74,7 +84,7 @@ export const MECHANICS = {
   }),
 
   /** Dano distribuído ao longo do tempo. */
-  damageOverTime: overTime(({ state, target }, n) => damage(state, target, n)),
+  damageOverTime: overTime(({ state, target, cardType }, n) => damage(state, target, n, cardType)),
 
   /** Cura distribuída ao longo do tempo. */
   healOverTime: overTime(({ state, target }, n) => heal(state, target, n)),
@@ -82,7 +92,7 @@ export const MECHANICS = {
   /** Dano contínuo por segundo, com hipótese de passar sozinha. */
   infection: defineMechanic<InfectionParams>({
     duration: (p) => (p.total ? p.total / p.perSecond : null),
-    onTick: ({ state, target }, p, e, dt) => {
+    onTick: ({ state, target, cardType }, p, e, dt) => {
       const done = e.data.done ?? 0;
       e.data.acc = (e.data.acc ?? 0) + p.perSecond * dt;
       let n = Math.floor(e.data.acc);
@@ -90,7 +100,7 @@ export const MECHANICS = {
       if (n > 0) {
         e.data.acc -= n;
         e.data.done = done + n;
-        damage(state, target, n);
+        damage(state, target, n, cardType);
       }
       if (p.total && (e.data.done ?? 0) >= p.total) {
         e.ended = true;
@@ -98,8 +108,9 @@ export const MECHANICS = {
       }
       if (!p.cureChance) return;
       e.data.roll = (e.data.roll ?? 0) + dt;
-      while (e.data.roll >= 1) {
-        e.data.roll -= 1;
+      const interval = p.cureInterval ?? 1;
+      while (e.data.roll >= interval) {
+        e.data.roll -= interval;
         if (Math.random() < p.cureChance) {
           e.ended = true;
           state.events.push({ type: 'cured', player: target, cardId: e.cardId });
@@ -108,9 +119,9 @@ export const MECHANICS = {
       }
     },
     // Acerta arredondamentos quando a doença chega ao fim do tempo sem ser curada.
-    onExpire: ({ state, target }, p, e) => {
+    onExpire: ({ state, target, cardType }, p, e) => {
       const rest = (p.total ?? 0) - (e.data.done ?? 0);
-      if (!e.ended && rest > 0) damage(state, target, rest);
+      if (!e.ended && rest > 0) damage(state, target, rest, cardType);
     },
   }),
 
@@ -128,11 +139,43 @@ export const MECHANICS = {
   /** Retira mana ao longo do tempo. */
   drainManaOverTime: overTime(({ state, target }, n) => drainMana(state, target, n)),
 
-  /** Remove as doenças (efeitos hostis) do alvo. Sem `types`, remove todas. */
+  /** Dá mana ao longo do tempo. */
+  gainManaOverTime: overTime(({ state, target }, n) => gainMana(state, target, n)),
+
+  /** A próxima carta destes tipos custa +`amount`; o efeito desaparece quando for jogada. */
+  costIncrease: defineMechanic<{ types: CardType[]; amount: number }>({
+    duration: () => null,
+    costDelta: (p, type) => (p.types.includes(type) ? p.amount : 0),
+    onOwnerPlay: (p, e, type) => {
+      if (p.types.includes(type)) e.ended = true;
+    },
+  }),
+
+  /** Troca a mão do alvo por cartas aleatórias de ambos os baralhos. As cartas originais voltam para o fim da fila. */
+  shuffleHand: defineMechanic<Record<string, never>>({
+    onApply: ({ state, target }) => {
+      const pl = state.players[target];
+      pl.hand.forEach((id, i) => {
+        if (!pl.borrowed[i]) pl.deck.push(id);
+      });
+      // Sem cartas que trocam a mão, para não haver ciclos infinitos.
+      const pool = state.pool.filter((id) => !getCard(id).effects.some((e) => e.mechanic === 'shuffleHand'));
+      for (let i = pool.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [pool[i], pool[j]] = [pool[j], pool[i]];
+      }
+      pl.hand = pool.slice(0, CONFIG.handSize);
+      pl.borrowed = pl.hand.map(() => true);
+    },
+  }),
+
+  /** Remove as doenças (efeitos hostis) do alvo. Sem `types`, remove todas. As cartas `permanent` nunca saem. */
   cleanse: defineMechanic<{ types?: CardType[] }>({
     onApply: ({ state, target }, p) => {
       const pl = state.players[target];
-      pl.effects = pl.effects.filter((e) => e.source === target || (p.types !== undefined && !p.types.includes(e.cardType)));
+      pl.effects = pl.effects.filter(
+        (e) => e.source === target || getCard(e.cardId).permanent || (p.types !== undefined && !p.types.includes(e.cardType)),
+      );
     },
   }),
 

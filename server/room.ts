@@ -1,7 +1,7 @@
 import { WebSocket } from 'ws';
 import { CONFIG } from '../shared/engine/config';
 import { createGame, other, playCard, tick } from '../shared/engine/game';
-import type { GameState, PlayerIndex } from '../shared/engine/types';
+import type { GameState, PlayerIndex, Side } from '../shared/engine/types';
 import { makeView, type ServerMsg } from '../shared/protocol';
 import type { GameResult, Profile } from './store';
 
@@ -111,10 +111,10 @@ export class Room {
     else this.sendLobby();
   }
 
-  play(i: PlayerIndex, handIndex: number) {
+  play(i: PlayerIndex, handIndex: number, side: Side) {
     if (!this.game) return;
     const cardId = this.game.players[i].hand[handIndex];
-    const result = playCard(this.game, i, handIndex);
+    const result = playCard(this.game, i, handIndex, side);
     if (!result.ok) {
       send(this.seats[i]?.ws ?? null, { t: 'error', message: result.reason });
       return;

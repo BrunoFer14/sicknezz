@@ -34,16 +34,19 @@ Estes valores estão em [shared/engine/config.ts](shared/engine/config.ts).
 |----------------|-------------------------------------------|----------------|
 | 🦠 Vírus       | dano ao longo do tempo                    | Hospital (a Vacina só previne) |
 | 🧫 Bactéria    | dano que escala com outras doenças        | Antibiótico    |
-| 🍔 Física      | enfraquece de forma permanente (mana, vida) | Exercício    |
+| 🍔 Física      | enfraquece até ser curada (mana, vida)    | Exercício      |
 | 🧠 Mental      | ataca a mana                              | Terapia        |
 | 💊 Tratamento  | cura e dá bónus a quem joga               | —              |
 
-O Hospital cura doenças de todos os tipos.
+O Hospital cura vírus e bactérias. As doenças **permanentes** (Ébola, SIDA) nenhum tratamento tira; marca-se uma carta assim com `permanent: true`.
+
+Regra: as doenças não acumulam. Jogar outra vez a mesma carta substitui a anterior (e reinicia a duração).
 
 Sinergias atuais:
 - A Pneumonia faz mais dano por cada vírus ativo no adversário.
 - A Diabetes faz mais dano por cada doença física ativa.
 - A Sépsis faz mais dano por cada doença de qualquer tipo.
+- A SIDA duplica o dano de vírus e bactérias que o adversário recebe.
 - A Vacina dá imunidade temporária a novos vírus (não cura os que já tens).
 
 Os tipos estão definidos em `CardType` ([types.ts](shared/engine/types.ts)) e `CARD_TYPES` ([cards.ts](shared/cards.ts)).

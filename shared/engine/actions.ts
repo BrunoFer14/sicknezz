@@ -3,8 +3,12 @@
 import { computeStats } from './stats';
 import type { CardType, GameState, PlayerIndex } from './types';
 
-export function damage(state: GameState, target: PlayerIndex, amount: number) {
+/** `type` é o tipo da carta que causa o dano (para aplicar multiplicadores como o da SIDA). */
+export function damage(state: GameState, target: PlayerIndex, amount: number, type?: CardType) {
   const p = state.players[target];
+  const stats = computeStats(p);
+  if (type === 'virus') amount = Math.round(amount * stats.virusDamageTaken);
+  else if (type === 'bacteria') amount = Math.round(amount * stats.bacteriaDamageTaken);
   const real = Math.min(p.hp, amount);
   if (real <= 0) return;
   p.hp -= real;
@@ -34,4 +38,9 @@ export function countDiseases(state: GameState, target: PlayerIndex, type?: Card
     if (e.source !== target && (!type || e.cardType === type)) plays.add(e.playId);
   }
   return plays.size;
+}
+
+export function gainMana(state: GameState, target: PlayerIndex, amount: number) {
+  const p = state.players[target];
+  p.mana = Math.min(computeStats(p).maxMana, p.mana + amount);
 }

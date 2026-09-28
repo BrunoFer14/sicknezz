@@ -12,6 +12,8 @@ export interface CardDef {
   description: string;
   /** Área onde a carta é largada: na do adversário (doenças) ou na tua (tratamentos). */
   target: TargetKind;
+  /** Doença permanente: nenhum tratamento a tira (nem o Hospital). */
+  permanent?: boolean;
   effects: EffectSpec[];
 }
 
@@ -70,9 +72,24 @@ export const CARDS = defineCards({
     emoji: '🩸',
     type: 'virus',
     cost: 8,
-    description: 'Tira 3 de vida por segundo, até 60. A cada segundo tem 8% de hipótese de passar sozinho.',
+    description: 'Tira 3 de vida por segundo, até 100. A cada segundo tem 10% de hipótese de passar sozinho. Permanente: nenhum tratamento a cura.',
     target: 'opponent',
-    effects: [{ mechanic: 'infection', params: { perSecond: 3, total: 60, cureChance: 0.08 } }],
+    permanent: true,
+    effects: [{ mechanic: 'infection', params: { perSecond: 3, total: 100, cureChance: 0.1 } }],
+  },
+  sida: {
+    name: 'SIDA',
+    emoji: '🎗️',
+    type: 'virus',
+    cost: 5,
+    description: 'O adversário passa a sofrer o dobro do dano de vírus e bactérias. Permanente: nenhum tratamento a cura.',
+    target: 'opponent',
+    permanent: true,
+    effects: [
+      // 'set' em vez de 'mul' para não acumular se for jogada várias vezes.
+      { mechanic: 'statModifier', params: { stat: 'virusDamageTaken', op: 'set', value: 2 } },
+      { mechanic: 'statModifier', params: { stat: 'bacteriaDamageTaken', op: 'set', value: 2 } },
+    ],
   },
 
   // ---------- Bactérias ----------
@@ -124,10 +141,10 @@ export const CARDS = defineCards({
     name: 'Sedentarismo',
     emoji: '🛋️',
     type: 'fisica',
-    cost: 2,
-    description: 'A regeneração de mana do adversário desce 15%. Permanente.',
+    cost: 3,
+    description: 'A regeneração de mana do adversário desce 20% até ser curada.',
     target: 'opponent',
-    effects: [{ mechanic: 'statModifier', params: { stat: 'manaRegen', op: 'mul', value: 0.85 } }],
+    effects: [{ mechanic: 'statModifier', params: { stat: 'manaRegen', op: 'mul', value: 0.8 } }],
   },
   asma: {
     name: 'Asma',
@@ -143,7 +160,7 @@ export const CARDS = defineCards({
     emoji: '🍔',
     type: 'fisica',
     cost: 4,
-    description: 'A mana máxima do adversário desce 2 (de 10 para 8). Permanente.',
+    description: 'A mana máxima do adversário desce 2 (de 10 para 8) até ser curada.',
     target: 'opponent',
     effects: [{ mechanic: 'statModifier', params: { stat: 'maxMana', op: 'add', value: -2 } }],
   },
@@ -152,7 +169,7 @@ export const CARDS = defineCards({
     emoji: '🫀',
     type: 'fisica',
     cost: 4,
-    description: 'A vida máxima do adversário desce 20. Permanente.',
+    description: 'A vida máxima do adversário desce 20 até ser curada.',
     target: 'opponent',
     effects: [{ mechanic: 'statModifier', params: { stat: 'maxHp', op: 'add', value: -20 } }],
   },
@@ -164,6 +181,15 @@ export const CARDS = defineCards({
     description: 'Tira 6 de vida, +7 por cada doença física ativa no adversário.',
     target: 'opponent',
     effects: [{ mechanic: 'damagePerDisease', params: { base: 6, per: 7, type: 'fisica' } }],
+  },
+  alergia: {
+    name: 'Alergia',
+    emoji: '🌼',
+    type: 'fisica',
+    cost: 1,
+    description: 'O próximo tratamento do adversário custa +2 de mana. Passa quando ele jogar um tratamento.',
+    target: 'opponent',
+    effects: [{ mechanic: 'costIncrease', params: { types: ['tratamento'], amount: 2 } }],
   },
 
   // ---------- Mentais ----------
@@ -198,13 +224,22 @@ export const CARDS = defineCards({
     name: 'Depressão',
     emoji: '🌧️',
     type: 'mental',
-    cost: 5,
+    cost: 6,
     description: 'Durante 20s: mana máxima do adversário −3 e regeneração −20%.',
     target: 'opponent',
     effects: [
       { mechanic: 'statModifier', params: { stat: 'maxMana', op: 'add', value: -3, duration: 20 } },
       { mechanic: 'statModifier', params: { stat: 'manaRegen', op: 'mul', value: 0.8, duration: 20 } },
     ],
+  },
+  alzheimer: {
+    name: 'Alzheimer',
+    emoji: '🧓',
+    type: 'mental',
+    cost: 2,
+    description: 'Troca a mão toda por cartas aleatórias dos dois baralhos. Larga na área do adversário para trocar a dele, ou na tua para trocar a tua.',
+    target: 'any',
+    effects: [{ mechanic: 'shuffleHand', params: {} }],
   },
 
   // ---------- Tratamentos ----------
@@ -235,6 +270,27 @@ export const CARDS = defineCards({
     target: 'self',
     effects: [{ mechanic: 'immunity', params: { types: ['virus'], duration: 10 } }],
   },
+  mascara: {
+    name: 'Máscara',
+    emoji: '😷',
+    type: 'tratamento',
+    cost: 1,
+    description: 'Ficas imune a novos vírus e bactérias durante 3s.',
+    target: 'self',
+    effects: [{ mechanic: 'immunity', params: { types: ['virus', 'bacteria'], duration: 3 } }],
+  },
+  soro: {
+    name: 'Soro',
+    emoji: '🧴',
+    type: 'tratamento',
+    cost: 3,
+    description: 'Durante 12s recuperas 1 de vida a cada 3s e ganhas 1 de mana a cada 6s (4 de vida e 2 de mana).',
+    target: 'self',
+    effects: [
+      { mechanic: 'healOverTime', params: { amount: 4, duration: 12 } },
+      { mechanic: 'gainManaOverTime', params: { amount: 2, duration: 12 } },
+    ],
+  },
   antibiotico: {
     name: 'Antibiótico',
     emoji: '💊',
@@ -249,15 +305,18 @@ export const CARDS = defineCards({
     emoji: '🏃',
     type: 'tratamento',
     cost: 3,
-    description: 'Cura todas as doenças físicas.',
+    description: 'Cura todas as doenças físicas e ficas imune a novas durante 8s.',
     target: 'self',
-    effects: [{ mechanic: 'cleanse', params: { types: ['fisica'] } }],
+    effects: [
+      { mechanic: 'cleanse', params: { types: ['fisica'] } },
+      { mechanic: 'immunity', params: { types: ['fisica'], duration: 8 } },
+    ],
   },
   terapia: {
     name: 'Terapia',
     emoji: '🧘',
     type: 'tratamento',
-    cost: 2,
+    cost: 3,
     description: 'Cura todas as doenças mentais.',
     target: 'self',
     effects: [{ mechanic: 'cleanse', params: { types: ['mental'] } }],
@@ -266,11 +325,11 @@ export const CARDS = defineCards({
     name: 'Hospital',
     emoji: '🏥',
     type: 'tratamento',
-    cost: 9,
-    description: 'Cura todas as doenças e recuperas 8 de vida.',
+    cost: 6,
+    description: 'Cura todos os vírus e bactérias (menos os permanentes) e recuperas 8 de vida.',
     target: 'self',
     effects: [
-      { mechanic: 'cleanse', params: {} },
+      { mechanic: 'cleanse', params: { types: ['virus', 'bacteria'] } },
       { mechanic: 'heal', params: { amount: 8 } },
     ],
   },

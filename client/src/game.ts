@@ -1,5 +1,5 @@
 import { getCard } from '../../shared/cards';
-import type { GameEvent } from '../../shared/engine/types';
+import type { GameEvent, Side } from '../../shared/engine/types';
 import type { ClientMsg, EffectView, GameView, PlayerView } from '../../shared/protocol';
 import { cardEl, escapeHtml } from './card';
 import { isMuted, sfx, toggleMute } from './sound';
@@ -224,7 +224,7 @@ export class GameScreen {
   // ---------- Mão ----------
 
   private updateHand(view: GameView) {
-    const { hand, mana, next } = view.me;
+    const { hand, mana, next, costs, borrowed } = view.me;
     hand.forEach((id, i) => {
       const slot = this.handSlots[i];
       if (this.handIds[i] !== id) {
@@ -234,8 +234,13 @@ export class GameScreen {
         el.insertAdjacentHTML('beforeend', `<div class="key">[${i + 1}]</div>`);
         slot.replaceChildren(el);
       }
-      const cost = getCard(id).cost;
-      showCharge(slot.firstElementChild as HTMLElement, mana, cost);
+      const cost = costs[i];
+      const el = slot.firstElementChild as HTMLElement;
+      // Custo pode mudar durante o jogo (ex.: Alergia).
+      (el.querySelector('.cost') as HTMLElement).textContent = String(cost);
+      el.classList.toggle('taxed', cost > getCard(id).cost);
+      el.classList.toggle('borrowed', borrowed[i]);
+      showCharge(el, mana, cost);
       if (this.dragGhost?.index === i) showCharge(this.dragGhost.el, mana, cost);
     });
     if (this.nextId !== next) {
@@ -250,7 +255,7 @@ export class GameScreen {
     }
   }
 
-  private tryPlay(index: number): boolean {
+  private tryPlay(index: number, side: Side = 'opponent'): boolean {
     const v = this.view;
     const id = this.handIds[index];
     if (!v || !id || v.winner !== null) return false;
@@ -258,13 +263,13 @@ export class GameScreen {
       this.toast('Espera pelo início do jogo!');
       return false;
     }
-    if (v.me.mana < getCard(id).cost) {
+    if (v.me.mana < v.me.costs[index]) {
       this.toast('Mana insuficiente');
       sfx.error();
       this.shake(this.handSlots[index]);
       return false;
     }
-    this.send({ t: 'play', handIndex: index });
+    this.send({ t: 'play', handIndex: index, side });
     return true;
   }
 
@@ -284,8 +289,11 @@ export class GameScreen {
       down.preventDefault();
 
       const card = getCard(id);
-      const zone = card.target === 'opponent' ? this.board.opp.root : this.board.me.root;
-      const wrongZone = card.target === 'opponent' ? this.board.me.root : this.board.opp.root;
+      const opp = this.board.opp.root;
+      const me = this.board.me.root;
+      // Cartas 'any' (ex.: Alzheimer) podem ser largadas em qualquer das áreas.
+      const zones = card.target === 'any' ? [opp, me] : card.target === 'opponent' ? [opp] : [me];
+      const wrongZone = card.target === 'any' ? null : card.target === 'opponent' ? me : opp;
       const rect = source.getBoundingClientRect();
       const offX = down.clientX - rect.left;
       const offY = down.clientY - rect.top;
@@ -301,7 +309,7 @@ export class GameScreen {
       this.dragGhost = { index, el: ghost };
 
       slot.classList.add('dragging');
-      zone.classList.add('drop-target');
+      for (const z of zones) z.classList.add('drop-target');
       const inside = (el: HTMLElement, e: PointerEvent) => {
         const r = el.getBoundingClientRect();
         return e.clientX >= r.left && e.clientX <= r.right && e.clientY >= r.top && e.clientY <= r.bottom;
@@ -309,7 +317,7 @@ export class GameScreen {
 
       const move = (e: PointerEvent) => {
         moveGhost(e.clientX, e.clientY);
-        zone.classList.toggle('drop-hover', inside(zone, e));
+        for (const z of zones) z.classList.toggle('drop-hover', inside(z, e));
       };
       const end = (e: PointerEvent) => {
         window.removeEventListener('pointermove', move);
@@ -317,11 +325,12 @@ export class GameScreen {
         window.removeEventListener('pointercancel', end);
         this.dragGhost = null;
         slot.classList.remove('dragging');
-        zone.classList.remove('drop-target', 'drop-hover');
+        for (const z of zones) z.classList.remove('drop-target', 'drop-hover');
 
         let played = false;
-        if (e.type === 'pointerup' && inside(zone, e)) played = this.tryPlay(index);
-        else if (e.type === 'pointerup' && inside(wrongZone, e)) {
+        const dropped = e.type === 'pointerup' ? zones.find((z) => inside(z, e)) : undefined;
+        if (dropped) played = this.tryPlay(index, dropped === me ? 'self' : 'opponent');
+        else if (e.type === 'pointerup' && wrongZone && inside(wrongZone, e)) {
           this.toast(card.target === 'opponent' ? 'Esta carta joga-se na área do adversário' : 'Esta carta joga-se na tua área');
         }
 

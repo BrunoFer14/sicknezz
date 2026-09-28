@@ -1,6 +1,7 @@
 // Mensagens trocadas entre cliente e servidor + a "vista" do jogo que cada jogador recebe.
 import { computeStats } from './engine/stats';
-import type { GameEvent, GameState, PlayerIndex, PlayerState, Stats } from './engine/types';
+import { cardCost } from './engine/game';
+import type { GameEvent, GameState, PlayerIndex, PlayerState, Side, Stats } from './engine/types';
 
 export type ClientMsg =
   /** Primeira mensagem de cada ligação. `session` identifica o separador (reconexão), `profileId`/`secret` o jogador (estatísticas). */
@@ -9,7 +10,8 @@ export type ClientMsg =
   | { t: 'join'; code: string; name: string; deck: string[] }
   /** Entrar na fila de matchmaking (conta para o ranking). */
   | { t: 'queue'; name: string; deck: string[] }
-  | { t: 'play'; handIndex: number }
+  /** `side`: área onde a carta foi largada (só conta para cartas que se jogam em qualquer lado). */
+  | { t: 'play'; handIndex: number; side?: Side }
   | { t: 'rematch' }
   | { t: 'leave' }
   | { t: 'stats' };
@@ -45,7 +47,8 @@ export interface GameView {
   time: number;
   you: PlayerIndex;
   winner: PlayerIndex | 'draw' | null;
-  me: PlayerView & { hand: string[]; next: string };
+  /** `costs`: custo atual de cada carta da mão; `borrowed`: cartas emprestadas pelo Alzheimer. */
+  me: PlayerView & { hand: string[]; costs: number[]; borrowed: boolean[]; next: string };
   /** O adversário não vê as tuas cartas, só quantas tens. */
   opp: PlayerView & { handCount: number };
   events: GameEvent[];
@@ -139,7 +142,13 @@ export function makeView(state: GameState, you: PlayerIndex, events: GameEvent[]
     time: state.time,
     you,
     winner: state.winner,
-    me: { ...playerView(me, you), hand: [...me.hand], next: me.deck[0] ?? me.hand[0] },
+    me: {
+      ...playerView(me, you),
+      hand: [...me.hand],
+      costs: me.hand.map((id) => cardCost(me, id)),
+      borrowed: [...me.borrowed],
+      next: me.deck[0] ?? me.hand[0],
+    },
     opp: { ...playerView(opp, oi), handCount: opp.hand.length },
     events,
     ...extras,
