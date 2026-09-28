@@ -1,14 +1,15 @@
 import { getCard } from '../../shared/cards';
 import type { ServerMsg } from '../../shared/protocol';
 import { escapeHtml } from './card';
-import { loadDeck } from './deck';
+import { activeDeckIndex, deleteDeck, listDecks, setActiveDeck } from './deck';
 
 interface LobbyActions {
   queue(name: string): void;
   create(name: string): void;
   join(code: string, name: string): void;
   leave(): void;
-  editDeck(): void;
+  /** Abre o construtor para o baralho neste espaço (vazio = baralho novo). */
+  editDeck(index: number): void;
   openStats(): void;
 }
 
@@ -61,12 +62,7 @@ export class LobbyScreen {
         </div>
         <p class="error">${escapeHtml(error)}</p>
       </div>
-      <div class="panel deck-summary">
-        <div class="deck-emojis">${loadDeck()
-          .map((id) => `<span title="${escapeHtml(getCard(id).name)}">${getCard(id).emoji}</span>`)
-          .join('')}</div>
-        <button id="edit-deck" class="btn">Editar baralho</button>
-      </div>
+      <div class="panel deck-summary"></div>
       <button id="stats" class="btn stats-btn">🏆 Estatísticas e ranking</button>`;
     const name = () => {
       const n = this.root.querySelector<HTMLInputElement>('#name')!.value.trim();
@@ -79,9 +75,50 @@ export class LobbyScreen {
     this.root.querySelector('#create')!.addEventListener('click', () => this.actions.create(name()));
     this.root.querySelector('#join')!.addEventListener('click', join);
     codeInput.addEventListener('keydown', (e) => e.key === 'Enter' && join());
-    this.root.querySelector('#edit-deck')!.addEventListener('click', () => this.actions.editDeck());
     this.root.querySelector('#stats')!.addEventListener('click', () => this.actions.openStats());
+    this.renderDecks();
     this.show();
+  }
+
+  /** Painel dos baralhos: espaços 1–10 (clicar escolhe; vazio cria um novo) e o baralho ativo. */
+  private renderDecks() {
+    const panel = this.root.querySelector<HTMLElement>('.deck-summary')!;
+    const decks = listDecks();
+    const active = activeDeckIndex();
+    const deck = decks[active]!;
+    panel.innerHTML = `
+      <div class="deck-tabs">${decks
+        .map(
+          (d, i) =>
+            `<button class="deck-tab${i === active ? ' active' : ''}${d ? '' : ' empty'}" data-i="${i}" title="${d ? escapeHtml(d.name) : 'Criar baralho novo'}">${d ? i + 1 : '+'}</button>`,
+        )
+        .join('')}</div>
+      <div class="deck-current">
+        <div>
+          <div class="deck-name">${escapeHtml(deck.name)}</div>
+          <div class="deck-emojis">${deck.cards
+            .map((id) => `<span title="${escapeHtml(getCard(id).name)}">${getCard(id).emoji}</span>`)
+            .join('')}</div>
+        </div>
+        <div class="deck-actions">
+          <button id="edit-deck" class="btn">Editar</button>
+          ${decks.filter(Boolean).length > 1 ? '<button id="delete-deck" class="btn" title="Apagar baralho">🗑️</button>' : ''}
+        </div>
+      </div>`;
+    panel.querySelectorAll<HTMLElement>('.deck-tab').forEach((tab) =>
+      tab.addEventListener('click', () => {
+        const i = Number(tab.dataset.i);
+        if (!decks[i]) return this.actions.editDeck(i);
+        setActiveDeck(i);
+        this.renderDecks();
+      }),
+    );
+    panel.querySelector('#edit-deck')!.addEventListener('click', () => this.actions.editDeck(active));
+    panel.querySelector('#delete-deck')?.addEventListener('click', () => {
+      if (!confirm(`Apagar o baralho "${deck.name}"?`)) return;
+      deleteDeck(active);
+      this.renderDecks();
+    });
   }
 
   showWaiting(msg: Extract<ServerMsg, { t: 'lobby' }>) {

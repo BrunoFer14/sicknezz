@@ -89,7 +89,24 @@ input:focus { outline: none; border-color: var(--toxic); }
 .stats-table th { text-align: left; color: var(--muted); font-weight: 600; font-size: 12px; text-transform: uppercase; padding: 8px; border-bottom: 1px solid var(--line); }
 .stats-table td { padding: 8px; border-bottom: 1px solid var(--line); white-space: nowrap; }
 .stats-table tr.me td { background: color-mix(in srgb, var(--toxic) 12%, transparent); }
-.deck-summary { flex-direction: row; align-items: center; justify-content: space-between; padding: 12px 16px; }
+.deck-summary { gap: 10px; padding: 12px 16px; }
+.deck-tabs { display: grid; grid-template-columns: repeat(10, 1fr); gap: 4px; }
+.deck-tab {
+  border: 1px solid var(--line);
+  background: var(--bg2);
+  color: inherit;
+  border-radius: 8px;
+  padding: 6px 0;
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+.deck-tab.empty { color: var(--muted); border-style: dashed; }
+.deck-tab.active { border-color: var(--toxic); color: var(--toxic); }
+.deck-current { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.deck-name { font-weight: 700; margin-bottom: 4px; }
+.deck-actions { display: flex; gap: 6px; flex-shrink: 0; }
+.deck-name-input { max-width: 260px; margin: 0 auto; text-align: center; font-size: 18px; font-weight: 700; }
 .deck-emojis { display: flex; flex-wrap: wrap; gap: 2px; font-size: 18px; }
 
 /* ---------- Construtor de baralhos ---------- */

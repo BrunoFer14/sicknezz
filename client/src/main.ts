@@ -1,6 +1,6 @@
 import './style.css';
 import type { ServerMsg } from '../../shared/protocol';
-import { loadDeck, saveDeck } from './deck';
+import { listDecks, loadDeck, saveDeck, setActiveDeck } from './deck';
 import { DeckBuilder } from './deckbuilder';
 import { GameScreen } from './game';
 import { identity } from './identity';
@@ -37,11 +37,15 @@ const lobby = new LobbyScreen(app, {
     net.send({ t: 'leave' });
     screen = 'menu';
   },
-  editDeck: () => {
+  editDeck: (index) => {
     lobby.hide();
     screen = 'builder';
-    new DeckBuilder(app, loadDeck(), (deck) => {
-      if (deck) saveDeck(deck);
+    const deck = listDecks()[index] ?? { name: `Baralho ${index + 1}`, cards: [] };
+    new DeckBuilder(app, deck, (saved) => {
+      if (saved) {
+        saveDeck(index, saved);
+        setActiveDeck(index);
+      }
       toMenu();
     });
   },

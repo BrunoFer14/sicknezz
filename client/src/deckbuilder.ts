@@ -1,7 +1,8 @@
 import { CARD_IDS, CARD_TYPES, getCard } from '../../shared/cards';
 import { CONFIG } from '../../shared/engine/config';
 import type { CardType } from '../../shared/engine/types';
-import { cardEl } from './card';
+import { cardEl, escapeHtml } from './card';
+import type { SavedDeck } from './deck';
 
 const TYPE_ORDER = Object.keys(CARD_TYPES) as CardType[];
 
@@ -19,16 +20,16 @@ export class DeckBuilder {
 
   constructor(
     container: HTMLElement,
-    deck: string[],
-    private onDone: (deck: string[] | null) => void,
+    deck: SavedDeck,
+    private onDone: (deck: SavedDeck | null) => void,
   ) {
-    this.deck = [...deck];
+    this.deck = [...deck.cards];
     this.root.className = 'builder';
     this.root.innerHTML = `
       <header class="builder-head">
         <button class="btn" id="back">← Voltar</button>
         <div class="builder-title">
-          <h2>O teu baralho</h2>
+          <input class="deck-name-input" maxlength="24" placeholder="Nome do baralho" value="${escapeHtml(deck.name)}" />
           <span class="builder-stats"></span>
         </div>
         <button class="btn primary" id="save">Guardar</button>
@@ -39,7 +40,9 @@ export class DeckBuilder {
       <div class="pool"></div>`;
 
     this.root.querySelector('#back')!.addEventListener('click', () => this.close(null));
-    this.root.querySelector('#save')!.addEventListener('click', () => this.close(this.deck));
+    this.root.querySelector('#save')!.addEventListener('click', () =>
+      this.close({ name: this.root.querySelector<HTMLInputElement>('.deck-name-input')!.value, cards: this.deck }),
+    );
 
     const filters = this.root.querySelector('.filters')!;
     const options: [CardType | 'all', string][] = [['all', 'Todas'], ...TYPE_ORDER.map((t) => [t, `${CARD_TYPES[t].emoji} ${CARD_TYPES[t].name}`] as [CardType, string])];
@@ -59,7 +62,7 @@ export class DeckBuilder {
     this.render();
   }
 
-  private close(deck: string[] | null) {
+  private close(deck: SavedDeck | null) {
     this.root.remove();
     this.onDone(deck);
   }
