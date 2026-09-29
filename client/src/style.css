@@ -745,3 +745,6 @@ a.card-chip:hover { border-color: var(--toxic); }
 .new-badge { background: var(--blood); color: #fff; border-radius: 6px; padding: 1px 6px; font-size: 11px; font-weight: 800; margin-left: 4px; }
 /* Sintoma sem a condição cumprida (o adversário ainda não tem a doença de que precisa). */
 .card.unmet { filter: saturate(.3) brightness(.7); }
+.note li.change .before { color: var(--muted); text-decoration: line-through; }
+.note li.change .arrow { color: var(--toxic); font-weight: 800; margin: 0 2px; }
+.note li.change .after { color: var(--text); font-weight: 600; }

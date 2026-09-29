@@ -105,6 +105,11 @@ export const MECHANICS = {
     onApply: ({ state, target, cardType }, p) => damage(state, target, p.base + p.per * countDiseases(state, target, p.types), cardType),
   }),
 
+  /** Dano imediato; faz `low` em vez de `amount` se o alvo tiver menos de `below` de vida (golpe final). */
+  finisher: defineMechanic<{ amount: number; low: number; below: number }>({
+    onApply: ({ state, target, cardType }, p) => damage(state, target, state.players[target].hp < p.below ? p.low : p.amount, cardType),
+  }),
+
   /** Cura imediata. */
   heal: defineMechanic<{ amount: number }>({
     onApply: ({ state, target }, p) => heal(state, target, p.amount),

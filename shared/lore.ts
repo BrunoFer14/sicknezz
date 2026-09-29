@@ -88,6 +88,10 @@ export const LORE: Partial<Record<CardId, CardLore>> = {
     what: 'Doença em que o açúcar (glicose) no sangue fica demasiado alto, porque o corpo não produz insulina suficiente (tipo 1) ou não a usa bem (tipo 2). Com o tempo, danifica o coração, os rins, os olhos e os nervos.',
     history: 'A insulina foi descoberta em 1921 por Frederick Banting e Charles Best, em Toronto, e salvou a vida ao primeiro doente logo no ano seguinte. "Mellitus", o nome completo, quer dizer "doce como mel", por causa do açúcar na urina.',
   },
+  enfarte: {
+    what: 'Um enfarte do miocárdio acontece quando uma artéria do coração fica bloqueada e parte do músculo deixa de receber sangue. É súbito e muito perigoso — sobretudo em quem já está fragilizado, como no jogo. Dor forte no peito que não passa? Liga logo 112.',
+    history: 'Em 1912, o médico norte-americano James Herrick foi dos primeiros a descrever que um enfarte podia ser causado por um coágulo numa artéria do coração — e que era possível sobreviver a ele.',
+  },
   fratura: {
     what: 'Quebra de um osso, por queda ou pancada. Normalmente é preciso imobilizar a zona e o osso demora algumas semanas a consolidar — no jogo, fica sem conseguir "carregar" cartas pesadas.',
     history: 'Os raios X, descobertos por Wilhelm Röntgen em 1895, permitiram pela primeira vez ver uma fratura sem abrir o corpo. Röntgen recebeu o primeiro Prémio Nobel da Física, em 1901.',
@@ -151,6 +155,14 @@ export const LORE: Partial<Record<CardId, CardLore>> = {
   },
 
   // ---------- Tratamentos ----------
+  medicacao: {
+    what: 'Os medicamentos contra infeções dividem-se em antibióticos, que matam bactérias, e antivirais, que travam a multiplicação dos vírus. Nenhum funciona contra tudo — mas no jogo junta-se tudo numa carta.',
+    history: 'Em 1928, Alexander Fleming descobriu a penicilina, o primeiro antibiótico. Os antivirais chegaram mais tarde: o aciclovir, contra o herpes, nos anos 1970, e as combinações contra o VIH em 1996.',
+  },
+  fisioterapia: {
+    what: 'Tratamento com exercícios, movimento e técnicas manuais para recuperar de lesões, fraturas ou de um AVC, e para melhorar problemas como a falta de atividade física ou a obesidade.',
+    history: 'Em 1813, o sueco Pehr Henrik Ling fundou em Estocolmo um instituto de ginástica médica, considerado um dos pontos de partida da fisioterapia moderna.',
+  },
   cafe: {
     what: 'O café contém cafeína, um estimulante que bloqueia no cérebro os sinais de cansaço (a adenosina). Dá energia durante umas horas — no jogo, literalmente.',
     history: 'Conta a lenda que um pastor etíope chamado Kaldi descobriu o café ao ver as suas cabras muito agitadas depois de comerem os frutos de um arbusto.',
@@ -160,47 +172,19 @@ export const LORE: Partial<Record<CardId, CardLore>> = {
     history: 'Em 1747, o médico escocês James Lind mostrou que os citrinos curavam o escorbuto nos marinheiros — uma das primeiras experiências clínicas controladas. Mais tarde percebeu-se que a causa era a falta de vitamina C.',
   },
   vacina: {
-    what: 'Ensina o sistema imunitário a reconhecer um vírus ou bactéria antes de o encontrar a sério. Não cura uma infeção que já existe — protege contra novas, como no jogo.',
+    what: 'Ensina o sistema imunitário a reconhecer um vírus ou bactéria antes de o encontrar a sério. Há vacinas contra vírus (gripe, sarampo) e contra bactérias (tétano, tosse convulsa). Não cura uma infeção que já existe — protege contra novas, como no jogo.',
     history: 'Em 1796, Edward Jenner usou a varíola das vacas para proteger contra a varíola humana. A palavra "vacina" vem do latim "vacca". Graças à vacinação, a varíola foi declarada erradicada em 1980.',
-  },
-  mascara: {
-    what: 'Barreira que reduz a passagem de gotículas e aerossóis, protegendo quem a usa e quem está à volta contra infeções respiratórias.',
-    history: 'O médico Wu Lien-teh promoveu o uso de máscaras durante a peste da Manchúria, em 1910–1911, ajudando a travar a epidemia. O uso generalizou-se de novo durante a pandemia de Covid-19.',
-  },
-  soro: {
-    what: 'O soro fisiológico (água com 0,9% de sal) é usado para hidratar e repor líquidos, muitas vezes pela veia. Ajuda o corpo a recuperar forças.',
-    history: 'Durante a epidemia de cólera de 1832, o médico escocês Thomas Latta foi um dos primeiros a injetar soluções salinas na veia de doentes desidratados.',
-  },
-  psicologo: {
-    what: 'Profissional de saúde que ajuda a compreender e a lidar com pensamentos, emoções e comportamentos. Não é só para crises: também ajuda a prevenir problemas — no jogo, protege contra doenças mentais.',
-    history: 'O primeiro laboratório de psicologia experimental foi fundado por Wilhelm Wundt em Leipzig, na Alemanha, em 1879 — considerado o nascimento da psicologia como ciência.',
   },
   quarentena: {
     what: 'Isolamento de pessoas que podem ter sido expostas a uma doença contagiosa, para evitar que a espalhem. No jogo, durante uns segundos, ninguém consegue passar vírus nem bactérias a ninguém.',
     history: 'A palavra vem do italiano "quaranta giorni" (40 dias): durante a Peste Negra, no século XIV, os navios que chegavam a Veneza tinham de esperar esse tempo antes de desembarcar.',
-  },
-  repouso: {
-    what: 'Descansar dá ao corpo tempo para reparar ossos, músculos e tecidos lesionados. Para muitas lesões e estados de esgotamento, é o primeiro tratamento — no jogo, cura todos os Estados.',
-    history: 'Em 1863, o cirurgião inglês John Hilton publicou "Rest and Pain" (Repouso e Dor), defendendo que o repouso era essencial para a recuperação de lesões — uma ideia que ainda hoje orienta a medicina.',
-  },
-  antiviral: {
-    what: 'Medicamentos que travam a multiplicação de um vírus no corpo. Não o eliminam de uma vez, mas tornam a doença mais leve e mais curta — no jogo, os vírus fazem metade do dano.',
-    history: 'O aciclovir, contra o herpes, foi um dos primeiros antivirais eficazes (anos 1970). Em 1996, as combinações de antirretrovirais transformaram a infeção pelo VIH numa doença controlável — por isso, no jogo, o Antiviral anula o efeito da SIDA enquanto dura.',
-  },
-  antibiotico: {
-    what: 'Medicamento que mata bactérias ou impede que se multipliquem. Não funciona contra vírus — nem no jogo, nem na vida real. O uso excessivo cria bactérias resistentes, uma das grandes ameaças à saúde.',
-    history: 'Em 1928, Alexander Fleming reparou que um fungo que tinha contaminado as suas placas de laboratório matava as bactérias à volta. Assim nasceu a penicilina, o primeiro antibiótico.',
-  },
-  exercicio: {
-    what: 'A atividade física regular fortalece o coração, os músculos e os ossos, e reduz o risco de diabetes, hipertensão e depressão. É o melhor "remédio" contra várias doenças físicas.',
-    history: 'Os Jogos Olímpicos da Antiguidade começaram em 776 a.C., na Grécia. Os médicos gregos já recomendavam o exercício para manter a saúde.',
   },
   terapia: {
     what: 'A psicoterapia trata problemas de saúde mental através da conversa com um profissional, ajudando a mudar formas de pensar e de agir que fazem mal.',
     history: 'A terapia cognitivo-comportamental, uma das mais usadas e estudadas, foi desenvolvida pelo psiquiatra Aaron Beck nos anos 1960.',
   },
   hospital: {
-    what: 'Lugar onde se tratam as doenças mais graves, com médicos, enfermeiros e equipamentos que não existem em casa. No jogo, é a única cura para os vírus.',
+    what: 'Lugar onde se tratam as doenças mais graves, com médicos, enfermeiros e equipamentos que não existem em casa. No jogo, cura tudo o que não seja permanente.',
     history: 'Em Lisboa, a construção do Hospital Real de Todos-os-Santos começou em 1492. Foi um dos maiores hospitais da Europa da época, até ser destruído no terramoto de 1755.',
   },
 };

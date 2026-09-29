@@ -20,9 +20,9 @@ export const BOT_LEVELS: Record<BotLevel, { name: string; reaction: [number, num
 /** Baralhos que a IA usa (um ao calhas por partida). */
 const BOT_DECKS: string[][] = [
   ['constipacao', 'gripe', 'covid', 'pneumonia', 'sepsis', 'salmonela', 'enxaqueca', 'vacina', 'hospital', 'vitaminas'],
-  ['sedentarismo', 'obesidade', 'hipertensao', 'diabetes', 'fratura', 'gripe', 'tuberculose', 'exercicio', 'soro', 'antibiotico'],
+  ['sedentarismo', 'obesidade', 'hipertensao', 'diabetes', 'fratura', 'gripe', 'tuberculose', 'fisioterapia', 'vitaminas', 'medicacao'],
   ['ansiedade', 'enxaqueca', 'burnout', 'paranoia', 'amnesia', 'covid', 'herpes', 'terapia', 'cafe', 'vitaminas'],
-  ['constipacao', 'gripe', 'herpes', 'ebola', 'sida', 'avc', 'alergia', 'mascara', 'hospital', 'cafe'],
+  ['constipacao', 'gripe', 'herpes', 'ebola', 'sida', 'avc', 'alergia', 'vacina', 'hospital', 'cafe'],
 ];
 
 export function botDeck(): string[] {
@@ -128,6 +128,9 @@ export class Bot {
         case 'damageOverTime':
           value += this.dmg(opp, card.type, e.params.amount) * 0.9;
           break;
+        case 'finisher':
+          value += this.dmg(opp, card.type, opp.hp < e.params.below ? e.params.low : e.params.amount);
+          break;
         case 'damagePerDisease':
           value += this.dmg(opp, card.type, e.params.base + e.params.per * diseases(opp, this.me, e.params.types));
           break;
@@ -169,7 +172,7 @@ export class Bot {
           else if (stat === 'maxHp') value += Math.abs(v) * 0.7;
           else if (stat === 'healingTaken') value += opp.hp < computeStats(opp).maxHp - 10 ? 8 : 3; // Lepra
           else if (side === 'self') {
-            // Antiviral: vale pelos vírus ativos em mim.
+            // Redução do dano de vírus em mim: vale pelos vírus ativos.
             const viruses = new Set(me.effects.filter((x) => x.source !== this.me && x.cardType === 'virus').map((x) => x.playId)).size;
             value += viruses * 6;
           } else if (v >= 2) value += 14; // SIDA

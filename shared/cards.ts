@@ -112,7 +112,7 @@ export const CARDS = defineCards({
     target: 'opponent',
     permanent: true,
     effects: [
-      // Não acumula (regra geral); 'mul' para o Antiviral a poder compensar.
+      // Não acumula (regra geral); 'mul' para a Febre se poder somar.
       { mechanic: 'statModifier', params: { stat: 'virusDamageTaken', op: 'mul', value: 2 } },
       { mechanic: 'statModifier', params: { stat: 'bacteriaDamageTaken', op: 'mul', value: 2 } },
     ],
@@ -221,18 +221,25 @@ export const CARDS = defineCards({
     target: 'opponent',
     effects: [{ mechanic: 'damagePerDisease', params: { base: 6, per: 7, types: ['fisica'] } }],
   },
+  enfarte: {
+    name: 'Enfarte',
+    emoji: '💥',
+    type: 'fisica',
+    cost: 5,
+    description: 'Tira 10 de vida, ou 20 se o adversário tiver menos de 40 de vida.',
+    target: 'opponent',
+    effects: [{ mechanic: 'finisher', params: { amount: 10, low: 20, below: 40 } }],
+  },
+
   // ---------- Estados ----------
   fratura: {
     name: 'Fratura',
     emoji: '🦴',
     type: 'estado',
     cost: 3,
-    description: 'Durante 10s o adversário só pode jogar cartas até custo 4 e não pode fazer Exercício.',
+    description: 'Durante 10s o adversário só pode jogar cartas até custo 4.',
     target: 'opponent',
-    effects: [
-      { mechanic: 'costLimit', params: { max: 4, duration: 10 } },
-      { mechanic: 'forbidCards', params: { cards: ['exercicio'], duration: 10 } },
-    ],
+    effects: [{ mechanic: 'costLimit', params: { max: 4, duration: 10 } }],
   },
   avc: {
     name: 'AVC',
@@ -365,63 +372,57 @@ export const CARDS = defineCards({
     effects: [{ mechanic: 'damagePerDisease', params: { base: 0, per: 2, types: ['virus', 'bacteria'] } }],
   },
 
-  // ---------- Tratamentos ----------
-  cafe: {
-    name: 'Café',
-    emoji: '☕',
-    type: 'tratamento',
-    cost: 2,
-    description: 'Ganhas 3 de energia ao longo de 6 segundos.',
-    target: 'self',
-    effects: [{ mechanic: 'gainEnergyOverTime', params: { amount: 3, duration: 6 } }],
-  },
-  vitaminas: {
-    name: 'Vitaminas',
-    emoji: '🍊',
+  // ---------- Tratamentos (cada cura cobre uma família de doenças) ----------
+  medicacao: {
+    name: 'Medicação',
+    emoji: '💊',
     type: 'tratamento',
     cost: 3,
-    description: 'Recuperas 6 de vida em 10 segundos.',
+    description: 'Cura todos os vírus e bactérias (menos os permanentes).',
     target: 'self',
-    effects: [{ mechanic: 'healOverTime', params: { amount: 6, duration: 10 } }],
+    effects: [{ mechanic: 'cleanse', params: { types: ['virus', 'bacteria'] } }],
+  },
+  fisioterapia: {
+    name: 'Fisioterapia',
+    emoji: '🩺',
+    type: 'tratamento',
+    cost: 3,
+    description: 'Cura todas as doenças Físicas e os Estados.',
+    target: 'self',
+    effects: [{ mechanic: 'cleanse', params: { types: ['fisica', 'estado'] } }],
+  },
+  terapia: {
+    name: 'Terapia',
+    emoji: '🧘',
+    type: 'tratamento',
+    cost: 3,
+    description: 'Cura todas as doenças Mentais e ficas imune a novas durante 5s.',
+    target: 'self',
+    effects: [
+      { mechanic: 'cleanse', params: { types: ['mental'] } },
+      { mechanic: 'immunity', params: { types: ['mental'], duration: 5 } },
+    ],
+  },
+  hospital: {
+    name: 'Hospital',
+    emoji: '🏥',
+    type: 'tratamento',
+    cost: 6,
+    description: 'Cura todas as doenças (menos as permanentes) e recuperas 8 de vida.',
+    target: 'self',
+    effects: [
+      { mechanic: 'cleanse', params: {} },
+      { mechanic: 'heal', params: { amount: 8 } },
+    ],
   },
   vacina: {
     name: 'Vacina',
     emoji: '💉',
     type: 'tratamento',
     cost: 3,
-    description: 'Ficas imune a novos vírus durante 7s. Não cura os vírus que já tens.',
+    description: 'Ficas imune a novos vírus e bactérias durante 6s. Não cura os que já tens.',
     target: 'self',
-    effects: [{ mechanic: 'immunity', params: { types: ['virus'], duration: 7 } }],
-  },
-  mascara: {
-    name: 'Máscara',
-    emoji: '😷',
-    type: 'tratamento',
-    cost: 2,
-    description: 'Ficas imune a novos vírus e bactérias durante 3s.',
-    target: 'self',
-    effects: [{ mechanic: 'immunity', params: { types: ['virus', 'bacteria'], duration: 3 } }],
-  },
-  soro: {
-    name: 'Soro',
-    emoji: '🧴',
-    type: 'tratamento',
-    cost: 4,
-    description: 'Durante 12s recuperas 1 de vida a cada 3s e ganhas 1 de energia a cada 6s (4 de vida e 2 de energia).',
-    target: 'self',
-    effects: [
-      { mechanic: 'healOverTime', params: { amount: 4, duration: 12 } },
-      { mechanic: 'gainEnergyOverTime', params: { amount: 2, duration: 12 } },
-    ],
-  },
-  psicologo: {
-    name: 'Psicólogo',
-    emoji: '🗣️',
-    type: 'tratamento',
-    cost: 2,
-    description: 'Ficas imune a novas doenças mentais durante 8s.',
-    target: 'self',
-    effects: [{ mechanic: 'immunity', params: { types: ['mental'], duration: 8 } }],
+    effects: [{ mechanic: 'immunity', params: { types: ['virus', 'bacteria'], duration: 6 } }],
   },
   quarentena: {
     name: 'Quarentena',
@@ -435,65 +436,23 @@ export const CARDS = defineCards({
       { mechanic: 'forbidTypes', params: { types: ['virus', 'bacteria'], duration: 5 }, target: 'opponent' },
     ],
   },
-  repouso: {
-    name: 'Repouso',
-    emoji: '🛌',
+  vitaminas: {
+    name: 'Vitaminas',
+    emoji: '🍊',
     type: 'tratamento',
-    cost: 3,
-    description: 'Cura todos os Estados e recuperas 4 de vida.',
+    cost: 2,
+    description: 'Recuperas 6 de vida em 8 segundos.',
     target: 'self',
-    effects: [
-      { mechanic: 'cleanse', params: { types: ['estado'] } },
-      { mechanic: 'heal', params: { amount: 4 } },
-    ],
+    effects: [{ mechanic: 'healOverTime', params: { amount: 6, duration: 8 } }],
   },
-  antiviral: {
-    name: 'Antiviral',
-    emoji: '🧪',
+  cafe: {
+    name: 'Café',
+    emoji: '☕',
     type: 'tratamento',
-    cost: 3,
-    description: 'Durante 12s os vírus fazem-te metade do dano (anula o efeito da SIDA enquanto dura).',
+    cost: 2,
+    description: 'Ganhas 4 de energia ao longo de 6 segundos.',
     target: 'self',
-    effects: [{ mechanic: 'statModifier', params: { stat: 'virusDamageTaken', op: 'mul', value: 0.5, duration: 12 } }],
-  },
-  antibiotico: {
-    name: 'Antibiótico',
-    emoji: '💊',
-    type: 'tratamento',
-    cost: 3,
-    description: 'Cura todas as bactérias.',
-    target: 'self',
-    effects: [{ mechanic: 'cleanse', params: { types: ['bacteria'] } }],
-  },
-  exercicio: {
-    name: 'Exercício',
-    emoji: '🏃',
-    type: 'tratamento',
-    cost: 3,
-    description: 'Cura todas as doenças físicas.',
-    target: 'self',
-    effects: [{ mechanic: 'cleanse', params: { types: ['fisica'] } }],
-  },
-  terapia: {
-    name: 'Terapia',
-    emoji: '🧘',
-    type: 'tratamento',
-    cost: 3,
-    description: 'Cura todas as doenças mentais.',
-    target: 'self',
-    effects: [{ mechanic: 'cleanse', params: { types: ['mental'] } }],
-  },
-  hospital: {
-    name: 'Hospital',
-    emoji: '🏥',
-    type: 'tratamento',
-    cost: 6,
-    description: 'Cura todos os vírus e bactérias (menos os permanentes) e recuperas 8 de vida.',
-    target: 'self',
-    effects: [
-      { mechanic: 'cleanse', params: { types: ['virus', 'bacteria'] } },
-      { mechanic: 'heal', params: { amount: 8 } },
-    ],
+    effects: [{ mechanic: 'gainEnergyOverTime', params: { amount: 4, duration: 6 } }],
   },
 });
 
@@ -502,7 +461,7 @@ export const CARD_IDS = Object.keys(CARDS) as CardId[];
 
 export const DEFAULT_DECK: CardId[] = [
   'constipacao', 'gripe', 'covid', 'pneumonia', 'salmonela',
-  'obesidade', 'asma', 'enxaqueca', 'vacina', 'exercicio',
+  'obesidade', 'asma', 'enxaqueca', 'vacina', 'fisioterapia',
 ];
 
 export function getCard(id: string): CardDef {

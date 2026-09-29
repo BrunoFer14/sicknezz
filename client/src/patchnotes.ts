@@ -1,14 +1,55 @@
 // Patch notes: o que mudou em cada versão (a mais recente primeiro). Para uma versão nova, junta uma entrada no topo.
 import { escapeHtml } from './card';
 
+/** Uma linha das notas: texto simples, ou uma alteração "antes → agora". */
+type NoteItem = string | { name: string; before: string; after: string };
+
 interface PatchNote {
   version: string;
   date: string;
   title: string;
-  sections: { title: string; items: string[] }[];
+  sections: { title: string; items: NoteItem[] }[];
 }
 
+/** Atalho para uma alteração "antes → agora". */
+const change = (name: string, before: string, after: string): NoteItem => ({ name, before, after });
+
 export const PATCH_NOTES: PatchNote[] = [
+  {
+    version: '0.9',
+    date: '29/09/2026',
+    title: 'Respostas',
+    sections: [
+      {
+        title: '💊 Tratamentos mais simples',
+        items: [
+          'Os tratamentos passam de 13 para 8: cada cura cobre uma família de doenças, para não ficarem cartas mortas na mão.',
+          change('Antibiótico + Antiviral', 'curar bactérias / metade do dano dos vírus', '💊 Medicação (3): cura todos os vírus e bactérias (menos os permanentes)'),
+          change('Exercício + Repouso', 'curar Físicas / curar Estados', '🩺 Fisioterapia (3): cura todas as Físicas e os Estados'),
+          change('Terapia + Psicólogo', 'curar Mentais / imunidade a Mentais 8s', '🧘 Terapia (3): cura as Mentais e fica imune a novas durante 5s'),
+          change('Hospital', 'cura vírus e bactérias e +8 de vida', 'cura todas as doenças (menos as permanentes) e +8 de vida'),
+          change('Vacina + Máscara', 'imune a vírus 7s (custo 3) / imune a vírus e bactérias 3s (custo 2)', '💉 Vacina (3): imune a vírus e bactérias durante 6s'),
+          change('Vitaminas + Soro', 'custo 3 · 6 de vida em 10s / custo 4 · 4 de vida e 2 de energia', '🍊 Vitaminas (2): 6 de vida em 8s'),
+          change('Café', '3 de energia em 6s', '4 de energia em 6s'),
+        ],
+      },
+      {
+        title: '⚖️ Equilíbrio',
+        items: [
+          change('Regeneração mínima de energia', '50% da normal', '55% da normal'),
+          change('Fratura', 'só cartas até custo 4 e sem Exercício durante 10s', 'só cartas até custo 4 durante 10s (o Exercício saiu do jogo)'),
+        ],
+      },
+      {
+        title: '🃏 Cartas novas',
+        items: ['💥 Enfarte (Física, 5): tira 10 de vida, ou 20 se o adversário tiver menos de 40 de vida — o golpe final.'],
+      },
+      {
+        title: '📦 Baralhos',
+        items: ['Os baralhos guardados que tinham cartas que saíram ficam marcados como incompletos no lobby — é só completá-los.'],
+      },
+    ],
+  },
   {
     version: '0.8',
     date: '29/09/2026',
@@ -38,10 +79,10 @@ export const PATCH_NOTES: PatchNote[] = [
         title: '🩹 Categoria nova: Estado',
         items: [
           'Os Estados limitam o que o adversário pode jogar. Curam-se com o novo Repouso.',
-          'Alergia, Fratura e AVC passam de Física para Estado.',
-          'Fratura: continua a limitar a cartas até custo 4 durante 10s e agora também impede o Exercício.',
-          'A Fratura passa a olhar para o custo impresso na carta (sem os aumentos da Alergia ou da Fadiga).',
-          'O Exercício passa a curar só as doenças Físicas (Sedentarismo, Asma, Obesidade, Hipertensão, Diabetes).',
+          change('Alergia', 'Física', 'Estado'),
+          change('AVC', 'Física', 'Estado'),
+          change('Fratura', 'Física · só cartas até custo 4 durante 10s', 'Estado · só cartas até custo 4 (o custo impresso na carta) e sem Exercício durante 10s'),
+          change('Exercício', 'cura Físicas (incluindo Fratura, AVC e Alergia)', 'cura só as Físicas: Sedentarismo, Asma, Obesidade, Hipertensão, Diabetes'),
         ],
       },
       {
@@ -58,16 +99,16 @@ export const PATCH_NOTES: PatchNote[] = [
       {
         title: '⚖️ Equilíbrio',
         items: [
-          'Quarentena: passa a bloquear só vírus e bactérias (as Físicas, Estados e Mentais podem ser jogados).',
-          'Tuberculose: dano 18 → 16.',
-          'SIDA: passa a multiplicar o dano de vírus e bactérias por 2 (em vez de o fixar em 2), para o Antiviral a poder compensar. Continua a não acumular.',
+          change('Quarentena', 'bloqueia todas as doenças durante 5s', 'bloqueia só vírus e bactérias durante 5s'),
+          change('Tuberculose', '18 de dano em 16s', '16 de dano em 16s'),
+          change('SIDA', 'fixa o dano de vírus e bactérias em ×2', 'multiplica-o por ×2 (o Antiviral pode compensar); continua a não acumular'),
         ],
       },
       {
         title: '✨ Outros',
         items: [
           'Página de Patch notes (esta!).',
-          'A Gripe passa a usar o emoji 🥶 (o 🤧 é agora do Espirro).',
+          change('Emoji da Gripe', '🤧', '🥶 (o 🤧 é agora do Espirro)'),
           'Corrigido: multiplicadores de dano (como o do Antiviral) agora funcionam também com o dano ao longo do tempo.',
         ],
       },
@@ -81,7 +122,7 @@ export const PATCH_NOTES: PatchNote[] = [
       {
         title: '👤 Contas Google',
         items: [
-          'É preciso iniciar sessão com o Google para jogar. O jogo abre num ecrã de entrada novo.',
+          change('Entrar no jogo', 'sem conta (perfil guardado só no browser)', 'com a conta Google, num ecrã de entrada novo'),
           'O ranking, o histórico e os baralhos ficam na conta e aparecem em qualquer dispositivo.',
           'Na primeira vez, o perfil que já tinhas no browser fica ligado à conta (não perdes nada).',
           'Guardamos só o primeiro nome e o identificador da conta — nunca o email. Ver a Política de Privacidade.',
@@ -109,10 +150,14 @@ export const PATCH_NOTES: PatchNote[] = [
       {
         title: '⚖️ Equilíbrio',
         items: [
-          'Regra nova: a regeneração de energia nunca desce abaixo de 50% da normal e a energia máxima nunca desce abaixo de 6 — acabaram os bloqueios de energia com várias cartas.',
-          'Sépsis: conta só vírus e bactérias ativos.',
-          'Alergia: custo 1 → 2. Ansiedade: tira 3 de energia (era 4).',
-          'Tuberculose: dano 22 → 18. Covid: dano 30 → 26. Herpes: 1 de dano a cada 3s (era 2,5s).',
+          change('Regeneração mínima de energia', 'sem limite (várias cartas juntas deixavam-na a ~15%)', 'nunca desce abaixo de 50% da normal'),
+          change('Energia máxima mínima', '1', '6'),
+          change('Sépsis', '+6 por cada doença ativa', '+6 por cada vírus ou bactéria ativa'),
+          change('Alergia', 'custo 1', 'custo 2'),
+          change('Ansiedade', '−4 de energia em 10s', '−3 de energia em 10s'),
+          change('Tuberculose', '22 de dano em 16s', '18 de dano em 16s'),
+          change('Covid', '30 de dano em 12s', '26 de dano em 12s'),
+          change('Herpes', '1 de dano a cada 2,5s', '1 de dano a cada 3s'),
         ],
       },
     ],
@@ -129,15 +174,20 @@ export const PATCH_NOTES: PatchNote[] = [
           '📜 Histórico das últimas 30 partidas, com replay de cada uma (pausa, velocidade, saltar e ver do lado do adversário, com a mão dele à vista).',
           '🏳️ Botão para desistir.',
           '⏱️ Relógio grande com a fase de energia e a contagem até acelerar.',
-          'A energia acelera ao longo do jogo: 1 a cada 2s no início, 1,5s a partir de 1:00, 1s a partir de 3:00 e 0,5s a partir de 4:00 (morte súbita).',
-          '🦠 Contágio: a Covid tem 25% de hipótese de também infetar quem a joga.',
+          change('Energia', '+1 a cada 1,5s durante todo o jogo', '+1 a cada 2s no início, 1,5s a partir de 1:00, 1s a partir de 3:00 e 0,5s a partir de 4:00 (morte súbita)'),
         ],
       },
       {
         title: '⚖️ Equilíbrio',
         items: [
-          'Vacina: custo 3, imunidade de 7s. Máscara: custo 2. Psicólogo: imunidade de 8s. Soro: custo 4.',
-          'Café: passa a dar 3 de energia em 6s. Exercício: custo 3, só cura. SIDA: custo 10.',
+          change('Covid', '25 de dano em 12s', '30 de dano em 12s, com 25% de contágio (pode infetar quem a joga)'),
+          change('Vacina', 'custo 2 · imune a vírus durante 10s', 'custo 3 · imune durante 7s'),
+          change('Máscara', 'custo 1', 'custo 2'),
+          change('Psicólogo', 'imune a mentais durante 15s', 'imune durante 8s'),
+          change('Soro', 'custo 3', 'custo 4'),
+          change('Café', '+50% de regeneração durante 10s', '+3 de energia em 6s'),
+          change('Exercício', 'cura Físicas e dá imunidade a Físicas durante 8s', 'só cura as Físicas'),
+          change('SIDA', 'custo 5', 'custo 10'),
           'Bipolaridade removida.',
         ],
       },
@@ -151,9 +201,9 @@ export const PATCH_NOTES: PatchNote[] = [
       {
         title: '🎮 Novidades',
         items: [
-          'Até 10 baralhos por jogador, com nome, escolha do ativo e apagar.',
+          change('Baralhos', '1 por jogador', 'até 10, com nome, escolha do ativo e apagar'),
           'Construtor de baralhos com filtros por tipo, efeito e custo, e pesquisa por nome.',
-          'A "mana" passa a chamar-se energia.',
+          change('Nome do recurso', 'mana', 'energia'),
         ],
       },
       {
@@ -168,12 +218,41 @@ export const PATCH_NOTES: PatchNote[] = [
     title: 'Primeiro grande equilíbrio',
     sections: [
       {
-        title: '⚖️ Equilíbrio',
+        title: '📜 Regras',
         items: [
-          'Mais dano e curas mais fracas — as partidas já não ficam infinitas.',
-          'A Vacina passa a dar só imunidade (não cura).',
-          'Ébola e SIDA passam a ser permanentes: nenhum tratamento os cura.',
-          'Regra nova: as doenças não acumulam — jogar a mesma carta outra vez substitui a anterior.',
+          change('Acumular doenças', 'a mesma carta jogada várias vezes somava', 'não acumula: jogar outra vez substitui a anterior'),
+          change('Ébola e SIDA', 'curáveis com o Hospital', 'permanentes: nenhum tratamento os cura'),
+        ],
+      },
+      {
+        title: '⚖️ Mais dano',
+        items: [
+          change('Constipação', '2 de dano em 4s', '4 de dano em 4s'),
+          change('Gripe', '5 de dano em 5s', '9 de dano em 6s'),
+          change('Covid', 'custo 6 · 20 de dano em 15s', 'custo 5 · 25 de dano em 12s'),
+          change('Ébola', 'custo 9 · 2/s até 100, 10% por segundo de passar', 'custo 8 · 3/s até 100, 10% por segundo de passar'),
+          change('Salmonela', '3 de dano', '7 de dano'),
+          change('Herpes', '1 de dano a cada 3s', '1 de dano a cada 2,5s'),
+          change('Tuberculose', 'custo 6 · 16 de dano em 20s', 'custo 5 · 22 de dano em 16s'),
+          change('Pneumonia', 'custo 5 · 6 de dano, +4 por vírus', 'custo 4 · 8 de dano, +5 por vírus'),
+          change('Sépsis', 'custo 7 · 5 de dano, +5 por doença', 'custo 6 · 8 de dano, +6 por doença'),
+        ],
+      },
+      {
+        title: '⚖️ Curas mais fracas',
+        items: [
+          change('Vacina', 'custo 3 · cura os vírus e imune 12s', 'custo 2 · só imunidade, 10s'),
+          change('Vitaminas', '12 de vida em 10s', '6 de vida em 10s'),
+          change('Exercício', 'cura Físicas e +5 de vida', 'cura Físicas e imunidade a Físicas durante 8s'),
+          change('Hospital', 'custo 8 · cura tudo e +20 de vida', 'custo 6 · cura vírus e bactérias e +8 de vida'),
+        ],
+      },
+      {
+        title: '⚖️ Outros',
+        items: [
+          change('Sedentarismo', 'custo 2 · −15% de regeneração', 'custo 3 · −20% de regeneração'),
+          change('Ansiedade', '−3 de energia em 12s', '−4 de energia em 10s'),
+          change('Enxaqueca', 'custo 3 · −2 de energia', 'custo 2 · −3 de energia'),
         ],
       },
       { title: '🃏 Cartas novas', items: ['SIDA, Alergia, Alzheimer, Máscara e Soro.'] },
@@ -216,6 +295,11 @@ function markSeen() {
   }
 }
 
+function itemHtml(it: NoteItem): string {
+  if (typeof it === 'string') return `<li>${escapeHtml(it)}</li>`;
+  return `<li class="change"><b>${escapeHtml(it.name)}:</b> <span class="before">${escapeHtml(it.before)}</span> <span class="arrow">→</span> <span class="after">${escapeHtml(it.after)}</span></li>`;
+}
+
 export class PatchNotesScreen {
   private root = document.createElement('div');
 
@@ -233,7 +317,7 @@ export class PatchNotesScreen {
         <article class="note${i === 0 ? ' latest' : ''}">
           <h3><span class="note-version">v${n.version}</span> ${escapeHtml(n.title)} <span class="muted note-date">${n.date}</span></h3>
           ${n.sections
-            .map((s) => `<h4>${escapeHtml(s.title)}</h4><ul>${s.items.map((it) => `<li>${escapeHtml(it)}</li>`).join('')}</ul>`)
+            .map((s) => `<h4>${escapeHtml(s.title)}</h4><ul>${s.items.map(itemHtml).join('')}</ul>`)
             .join('')}
         </article>`,
       ).join('')}`;

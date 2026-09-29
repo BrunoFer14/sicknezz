@@ -20,6 +20,7 @@ export function cardRoles(id: string): Set<Role> {
     switch (e.mechanic) {
       case 'damage':
       case 'damagePerDisease':
+      case 'finisher':
       case 'damageOverTime':
       case 'infection':
         roles.add('dano');
@@ -42,7 +43,7 @@ export function cardRoles(id: string): Set<Role> {
         const { stat } = e.params;
         if (stat === 'energyRegen' || stat === 'maxEnergy') roles.add('energia');
         else if (stat === 'healingTaken') roles.add('controlo'); // Lepra
-        else if (stat.endsWith('DamageTaken')) roles.add(card.target === 'self' ? 'imunidade' : 'dano'); // Antiviral / SIDA
+        else if (stat.endsWith('DamageTaken')) roles.add(card.target === 'self' ? 'imunidade' : 'dano'); // proteção / SIDA, Febre
         else roles.add('dano');
         break;
       }

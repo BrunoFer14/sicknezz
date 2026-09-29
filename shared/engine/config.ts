@@ -26,7 +26,7 @@ export const CONFIG = {
    * Limites para as cartas de energia não bloquearem o adversário por completo
    * (várias cartas diferentes somam-se: Asma × Insónia × Sedentarismo...).
    */
-  minEnergyRegenFactor: 0.5, // a regeneração nunca desce abaixo de 50% da normal
+  minEnergyRegenFactor: 0.55, // a regeneração nunca desce abaixo de 55% da normal
   minMaxEnergy: 6, // a energia máxima nunca desce abaixo de 6
   energyPhases: [
     { at: 0, mult: 0.75 }, //  0:00  1 a cada 2s (arranque um pouco mais lento)

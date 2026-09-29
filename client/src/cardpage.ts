@@ -36,7 +36,7 @@ function empowers(card: CardDef, self: string): string[] {
   );
 }
 
-/** Cartas que mudam o dano desta doença: `up` = fazem-na tirar mais vida (SIDA), senão menos (Antiviral). */
+/** Cartas que mudam o dano desta doença: `up` = fazem-na tirar mais vida (SIDA), senão menos (ex.: uma carta de proteção). */
 function damageChangedBy(card: CardDef, self: string, up: boolean): string[] {
   return CARD_IDS.filter(
     (id) =>

@@ -41,12 +41,12 @@ Estes valores estão em [shared/engine/config.ts](shared/engine/config.ts).
 
 | Tipo           | Estilo                                    | Cura           |
 |----------------|-------------------------------------------|----------------|
-| 🦠 Vírus       | dano ao longo do tempo                    | Hospital (a Vacina só previne) |
-| 🧫 Bactéria    | dano que escala com outras doenças        | Antibiótico    |
-| 🍔 Física      | enfraquece até ser curada (energia, vida) | Exercício      |
-| 🩹 Estado      | limita o que o adversário pode jogar      | Repouso        |
+| 🦠 Vírus       | dano ao longo do tempo                    | Medicação, Hospital |
+| 🧫 Bactéria    | dano que escala com outras doenças        | Medicação, Hospital |
+| 🍔 Física      | enfraquece até ser curada (energia, vida) | Fisioterapia, Hospital |
+| 🩹 Estado      | limita o que o adversário pode jogar      | Fisioterapia, Hospital |
 | 💢 Sintoma     | só se joga se o adversário já tiver certa doença (`requires`), e piora-a | — |
-| 🧠 Mental      | ataca a energia                           | Terapia        |
+| 🧠 Mental      | ataca a energia                           | Terapia, Hospital |
 | 💊 Tratamento  | cura e dá bónus a quem joga               | —              |
 
 O Hospital cura vírus e bactérias. As doenças **permanentes** (Ébola, SIDA) nenhum tratamento tira; marca-se uma carta assim com `permanent: true`.
@@ -117,6 +117,7 @@ O TypeScript valida os `params` de cada mecânica, e o editor dá autocomplete. 
 | Mecânica            | Params                                            | Exemplo               |
 |---------------------|---------------------------------------------------|-----------------------|
 | `damage`            | `amount`                                          | Salmonela             |
+| `finisher`          | `amount`, `low`, `below`                          | Enfarte               |
 | `damagePerDisease`  | `base`, `per`, `type?`                            | Pneumonia, Sépsis     |
 | `heal`              | `amount`                                          | Hospital              |
 | `damageOverTime`    | `amount`, `duration`                              | Gripe, Covid          |
@@ -125,9 +126,9 @@ O TypeScript valida os `params` de cada mecânica, e o editor dá autocomplete. 
 | `statModifier`      | `stat`, `op` (add/mul/set), `value`, `duration?`  | Obesidade, Asma, Café |
 | `drainEnergy`         | `amount`                                          | Enxaqueca             |
 | `drainEnergyOverTime` | `amount`, `duration`                              | Ansiedade             |
-| `cleanse`           | `types?`                                          | Antibiótico, Exercício |
-| `immunity`          | `types`, `duration`                               | Vacina, Máscara       |
-| `gainEnergyOverTime`  | `amount`, `duration`                              | Soro                  |
+| `cleanse`           | `types?`                                          | Medicação, Fisioterapia, Hospital |
+| `immunity`          | `types`, `duration`                               | Vacina, Terapia       |
+| `gainEnergyOverTime`  | `amount`, `duration`                              | Café                  |
 | `drainEnergyAbove`    | `keep`                                            | Burnout               |
 | `costIncrease`      | `types`, `amount`                                 | Alergia               |
 | `costLimit`         | `max`, `duration`                                 | Fratura               |
@@ -136,7 +137,7 @@ O TypeScript valida os `params` de cada mecânica, e o editor dá autocomplete. 
 | `blind`             | `duration`                                        | Paranoia              |
 | `lockSlots`         | `slots`, `duration`                               | AVC                   |
 | `forbidTypes`       | `types`, `duration`                               | Quarentena            |
-| `forbidCards`       | `cards`, `duration`                               | Fratura               |
+| `forbidCards`       | `cards`, `duration`                               | (livre para cartas novas) |
 | `costUp`            | `amount`, `duration`                              | Fadiga                |
 | `spread`            | `types`                                          | Espirro               |
 
