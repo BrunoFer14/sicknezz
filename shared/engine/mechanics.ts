@@ -40,6 +40,8 @@ export interface MechanicDef<P> {
   maxCost?: (params: P) => number;
   /** Posições da mão (0 = mais à esquerda) que o dono do efeito não pode jogar enquanto está ativo. */
   lockedSlots?: (params: P) => number[];
+  /** Tipos de carta que o dono do efeito não pode jogar enquanto está ativo. */
+  forbids?: (params: P) => CardType[];
 }
 
 function defineMechanic<P>(def: MechanicDef<P>): MechanicDef<P> {
@@ -79,8 +81,8 @@ export const MECHANICS = {
   }),
 
   /** Dano imediato: `base` + `per` por cada doença ativa no alvo (opcionalmente só de um tipo). */
-  damagePerDisease: defineMechanic<{ base: number; per: number; type?: CardType }>({
-    onApply: ({ state, target, cardType }, p) => damage(state, target, p.base + p.per * countDiseases(state, target, p.type), cardType),
+  damagePerDisease: defineMechanic<{ base: number; per: number; types?: CardType[] }>({
+    onApply: ({ state, target, cardType }, p) => damage(state, target, p.base + p.per * countDiseases(state, target, p.types), cardType),
   }),
 
   /** Cura imediata. */
@@ -172,6 +174,12 @@ export const MECHANICS = {
   costLimit: defineMechanic<{ max: number; duration: number }>({
     duration: (p) => p.duration,
     maxCost: (p) => p.max,
+  }),
+
+  /** Durante `duration` segundos o alvo não pode jogar cartas destes tipos. */
+  forbidTypes: defineMechanic<{ types: CardType[]; duration: number }>({
+    duration: (p) => p.duration,
+    forbids: (p) => p.types,
   }),
 
   /** Durante `duration` segundos o alvo não pode jogar as cartas nestas posições da mão. */

@@ -49,6 +49,8 @@ Estes valores estão em [shared/engine/config.ts](shared/engine/config.ts).
 
 O Hospital cura vírus e bactérias. As doenças **permanentes** (Ébola, SIDA) nenhum tratamento tira; marca-se uma carta assim com `permanent: true`.
 
+Regra: a energia nunca fica bloqueada por completo — a regeneração não desce abaixo de 50% da normal e a energia máxima não desce abaixo de 6, por mais cartas de energia que estejam ativas (`minEnergyRegenFactor` e `minMaxEnergy` no config).
+
 Regra: as doenças não acumulam. Jogar outra vez a mesma carta substitui a anterior (e reinicia a duração).
 
 Sinergias atuais:
@@ -131,6 +133,7 @@ O TypeScript valida os `params` de cada mecânica, e o editor dá autocomplete. 
 | `forgetBest`        | —                                                 | Amnésia               |
 | `blind`             | `duration`                                        | Paranoia              |
 | `lockSlots`         | `slots`, `duration`                               | AVC                   |
+| `forbidTypes`       | `types`, `duration`                               | Quarentena            |
 
 Stats que se podem modificar: `maxHp`, `maxEnergy`, `energyRegen`. Se o `statModifier` não tiver `duration`, o efeito é permanente. O mesmo acontece com o `infection` sem `total`.
 

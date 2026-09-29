@@ -325,7 +325,7 @@ export class GameScreen {
       return false;
     }
     if (v.me.locked[index]) {
-      this.toast('AVC: esta carta está bloqueada');
+      this.toast('Esta carta está bloqueada (AVC ou Quarentena)');
       sfx.error();
       this.shake(this.handSlots[index]);
       return false;

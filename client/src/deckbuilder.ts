@@ -55,6 +55,10 @@ function cardRoles(id: string): Set<Role> {
         // Energia máxima/regeneração conta como energia; vida máxima e multiplicadores de dano contam como dano.
         roles.add(e.params.stat === 'energyRegen' || e.params.stat === 'maxEnergy' ? 'energia' : 'dano');
         break;
+      case 'forbidTypes':
+        roles.add('imunidade');
+        roles.add('controlo');
+        break;
       default:
         // Custos, bloqueios, mão, Paranoia...
         roles.add('controlo');

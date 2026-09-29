@@ -127,7 +127,7 @@ export class Bot {
           value += this.dmg(opp, card.type, e.params.amount) * 0.9;
           break;
         case 'damagePerDisease':
-          value += this.dmg(opp, card.type, e.params.base + e.params.per * diseases(opp, other(this.me), e.params.type));
+          value += this.dmg(opp, card.type, e.params.base + e.params.per * diseases(opp, other(this.me), e.params.types));
           break;
         case 'infection':
           value += this.dmg(opp, card.type, e.params.total ? 29 : 20);
@@ -168,6 +168,10 @@ export class Bot {
           else if (op === 'set') value += target.effects.some((x) => x.cardId === 'sida') ? 0 : 14; // SIDA
           break;
         }
+        case 'forbidTypes':
+          // Quarentena: vale a pena quando o adversário tem energia para atacar.
+          value += opp.energy >= 5 ? 7 : 2;
+          break;
         case 'costLimit':
         case 'lockSlots':
           value += opp.energy >= 4 ? 8 : 4;
@@ -196,6 +200,6 @@ export class Bot {
   }
 }
 
-function diseases(p: PlayerState, from: PlayerIndex, type?: CardType): number {
-  return new Set(p.effects.filter((e) => e.source === from && (!type || e.cardType === type)).map((e) => e.playId)).size;
+function diseases(p: PlayerState, from: PlayerIndex, types?: CardType[]): number {
+  return new Set(p.effects.filter((e) => e.source === from && (!types || types.includes(e.cardType))).map((e) => e.playId)).size;
 }

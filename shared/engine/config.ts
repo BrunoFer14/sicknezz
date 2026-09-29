@@ -20,6 +20,12 @@ export const CONFIG = {
    * A regeneração de energia acelera ao longo do jogo: a partir de `at` segundos é multiplicada por `mult`.
    * Começa lento e acelera para as partidas não se arrastarem.
    */
+  /**
+   * Limites para as cartas de energia não bloquearem o adversário por completo
+   * (várias cartas diferentes somam-se: Asma × Insónia × Sedentarismo...).
+   */
+  minEnergyRegenFactor: 0.5, // a regeneração nunca desce abaixo de 50% da normal
+  minMaxEnergy: 6, // a energia máxima nunca desce abaixo de 6
   energyPhases: [
     { at: 0, mult: 0.75 }, //  0:00  1 a cada 2s (arranque um pouco mais lento)
     { at: 60, mult: 1 }, //    1:00  1 a cada 1,5s

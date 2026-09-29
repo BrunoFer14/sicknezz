@@ -57,6 +57,13 @@ export function maxPlayableCost(p: PlayerState): number | null {
   return max;
 }
 
+/** Tipos de carta que o jogador não pode jogar agora (ex.: Quarentena). */
+export function forbiddenTypes(p: PlayerState): Set<CardType> {
+  const types = new Set<CardType>();
+  for (const e of p.effects) getMechanic(e.mechanic).forbids?.(e.params).forEach((t) => types.add(t));
+  return types;
+}
+
 /** Posições da mão que o jogador não pode jogar agora (ex.: AVC). */
 export function lockedSlots(p: PlayerState): Set<number> {
   const locked = new Set<number>();
@@ -75,6 +82,7 @@ export function playCard(state: GameState, player: PlayerIndex, handIndex: numbe
   const cost = cardCost(p, cardId);
   if (p.energy < cost) return { ok: false, reason: 'Energia insuficiente.' };
   if (lockedSlots(p).has(handIndex)) return { ok: false, reason: 'Esta carta está bloqueada.' };
+  if (forbiddenTypes(p).has(card.type)) return { ok: false, reason: 'Quarentena: não podes jogar doenças agora.' };
   const max = maxPlayableCost(p);
   if (max !== null && cost > max) return { ok: false, reason: `Só podes jogar cartas até custo ${max}.` };
 

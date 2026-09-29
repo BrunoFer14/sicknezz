@@ -31,11 +31,11 @@ export function drainEnergy(state: GameState, target: PlayerIndex, amount: numbe
   state.events.push({ type: 'energyLoss', player: target, amount: real });
 }
 
-/** Número de doenças ativas (cartas hostis) num jogador, opcionalmente só de um tipo. */
-export function countDiseases(state: GameState, target: PlayerIndex, type?: CardType): number {
+/** Número de doenças ativas (cartas hostis) num jogador, opcionalmente só destes tipos. */
+export function countDiseases(state: GameState, target: PlayerIndex, types?: CardType[]): number {
   const plays = new Set<number>();
   for (const e of state.players[target].effects) {
-    if (e.source !== target && (!type || e.cardType === type)) plays.add(e.playId);
+    if (e.source !== target && (!types || types.includes(e.cardType))) plays.add(e.playId);
   }
   return plays.size;
 }

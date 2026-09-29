@@ -1,3 +1,4 @@
+import { CONFIG } from './config';
 import type { PlayerState, Stats } from './types';
 
 const OP_ORDER = ['add', 'mul', 'set'] as const;
@@ -15,7 +16,7 @@ export function computeStats(player: PlayerState): Stats {
     }
   }
   stats.maxHp = Math.max(1, stats.maxHp);
-  stats.maxEnergy = Math.max(1, stats.maxEnergy);
-  stats.energyRegen = Math.max(0, stats.energyRegen);
+  stats.maxEnergy = Math.max(Math.min(CONFIG.minMaxEnergy, player.base.maxEnergy), stats.maxEnergy);
+  stats.energyRegen = Math.max(player.base.energyRegen * CONFIG.minEnergyRegenFactor, stats.energyRegen);
   return stats;
 }
