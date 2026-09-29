@@ -2,6 +2,7 @@ import './style.css';
 import type { AccountInfo, ServerMsg } from '../../shared/protocol';
 import { activeDeckError, exportDecks, importDecks, listDecks, loadDeck, onDecksChange, saveDeck, setActiveDeck } from './deck';
 import { CardsScreen } from './cardpage';
+import { PatchNotesScreen } from './patchnotes';
 import { DeckBuilder } from './deckbuilder';
 import { GameScreen } from './game';
 import { identity, resetIdentity, setIdentity } from './identity';
@@ -13,13 +14,14 @@ import { installPreview } from './preview';
 import { sfx } from './sound';
 import { StatsScreen } from './stats';
 
-type Screen = 'login' | 'menu' | 'waiting' | 'queue' | 'game' | 'builder' | 'stats' | 'replay' | 'cards';
+type Screen = 'login' | 'menu' | 'waiting' | 'queue' | 'game' | 'builder' | 'stats' | 'replay' | 'cards' | 'notes';
 
 const app = document.getElementById('app')!;
 let screen: Screen = 'login';
 let game: GameScreen | null = null;
 let stats: StatsScreen | null = null;
 let cards: CardsScreen | null = null;
+let notes: PatchNotesScreen | null = null;
 /** Login com Google: se o servidor o tiver configurado e se há sessão iniciada. */
 let googleClientId: string | null = null;
 let accountName: string | null = null;
@@ -118,6 +120,7 @@ const lobby = new LobbyScreen(app, {
   },
   openStats,
   openCards: () => navigate('/cartas'),
+  openNotes: () => navigate('/patch-notes'),
   accountName: () => accountName,
   logout: () => {
     net.send({ t: 'logout' });
@@ -143,10 +146,20 @@ function navigate(path: string) {
 function route() {
   if (screen === 'game' || screen === 'replay') return;
   const m = location.pathname.match(/^\/cartas(?:\/([\w-]+))?\/?$/);
+  const isNotes = /^\/patch-notes\/?$/.test(location.pathname);
   cards?.destroy();
   cards = null;
+  notes?.destroy();
+  notes = null;
+  if (isNotes) {
+    lobby.hide();
+    login.hide();
+    screen = 'notes';
+    notes = new PatchNotesScreen(app, navigate);
+    return;
+  }
   if (!m) {
-    if (screen === 'cards') toMenu();
+    if (screen === 'cards' || screen === 'notes') toMenu();
     return;
   }
   lobby.hide();
@@ -165,6 +178,8 @@ function toMenu(message = '') {
   game = null;
   cards?.destroy();
   cards = null;
+  notes?.destroy();
+  notes = null;
   if (location.pathname !== '/') history.pushState(null, '', '/' + location.search);
   if (needsLogin()) {
     screen = 'login';
@@ -214,6 +229,8 @@ function onMessage(msg: ServerMsg) {
       if (!game) {
         cards?.destroy();
         cards = null;
+        notes?.destroy();
+        notes = null;
         if (screen === 'queue' || screen === 'waiting') sfx.found();
         lobby.hide();
         login.hide();

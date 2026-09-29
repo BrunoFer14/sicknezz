@@ -36,10 +36,14 @@ function empowers(card: CardDef, self: string): string[] {
   );
 }
 
-/** Cartas que fazem esta doença tirar mais vida (ex.: SIDA duplica o dano de vírus e bactérias). */
-function boostedBy(card: CardDef, self: string): string[] {
+/** Cartas que mudam o dano desta doença: `up` = fazem-na tirar mais vida (SIDA), senão menos (Antiviral). */
+function damageChangedBy(card: CardDef, self: string, up: boolean): string[] {
   return CARD_IDS.filter(
-    (id) => id !== self && getCard(id).effects.some((e) => e.mechanic === 'statModifier' && e.params.stat === `${card.type}DamageTaken`),
+    (id) =>
+      id !== self &&
+      getCard(id).effects.some(
+        (e) => e.mechanic === 'statModifier' && e.params.stat === `${card.type}DamageTaken` && (up ? e.params.value > 1 : e.params.value < 1),
+      ),
   );
 }
 
@@ -142,8 +146,10 @@ export class CardsScreen {
       game += `<div class="info-row"><b>Bloqueada por</b><div>${chips(blockedBy(card))}</div></div>`;
       const syn = empowers(card, id);
       if (syn.length) game += `<div class="info-row"><b>Dá força a</b><div>${chips(syn)}</div></div>`;
-      const boost = boostedBy(card, id);
+      const boost = damageChangedBy(card, id, true);
       if (boost.length) game += `<div class="info-row"><b>Fica mais forte com</b><div>${chips(boost)}</div></div>`;
+      const weak = damageChangedBy(card, id, false);
+      if (weak.length) game += `<div class="info-row"><b>Enfraquecida por</b><div>${chips(weak)}</div></div>`;
     }
 
     const s = this.stats?.cards.find((c) => c.cardId === id);

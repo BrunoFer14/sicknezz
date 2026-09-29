@@ -1,6 +1,7 @@
 import { getCard } from '../../shared/cards';
 import type { ServerMsg } from '../../shared/protocol';
 import { escapeHtml } from './card';
+import { hasUnseenNotes, LATEST_VERSION } from './patchnotes';
 import { activeDeckIndex, deleteDeck, isComplete, listDecks, setActiveDeck } from './deck';
 
 interface LobbyActions {
@@ -13,6 +14,7 @@ interface LobbyActions {
   editDeck(index: number): void;
   openStats(): void;
   openCards(): void;
+  openNotes(): void;
   /** Nome da conta Google (null sem sessão iniciada). */
   accountName(): string | null;
   logout(): void;
@@ -101,6 +103,7 @@ export class LobbyScreen {
         <button id="stats" class="btn stats-btn">🏆 Estatísticas e ranking</button>
         <button id="cards" class="btn stats-btn">📖 Cartas</button>
       </div>
+      <button id="notes" class="btn stats-btn">📰 Patch notes <span class="muted">v${LATEST_VERSION}</span>${hasUnseenNotes() ? ' <span class="new-badge">NOVO</span>' : ''}</button>
       <p class="lobby-footer"><a href="/privacidade.html">Política de Privacidade</a></p>`;
     const name = () => {
       const n = this.root.querySelector<HTMLInputElement>('#name')!.value.trim();
@@ -119,6 +122,7 @@ export class LobbyScreen {
     codeInput.addEventListener('keydown', (e) => e.key === 'Enter' && join());
     this.root.querySelector('#stats')!.addEventListener('click', () => this.actions.openStats());
     this.root.querySelector('#cards')!.addEventListener('click', () => this.actions.openCards());
+    this.root.querySelector('#notes')!.addEventListener('click', () => this.actions.openNotes());
     this.renderDecks();
     this.renderAccount();
     this.show();

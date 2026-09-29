@@ -1,10 +1,10 @@
 export type PlayerIndex = 0 | 1;
 
 /** Tipos de carta. Para um tipo novo, adiciona-o aqui e em CARD_TYPES (shared/cards.ts). */
-export type CardType = 'virus' | 'bacteria' | 'fisica' | 'mental' | 'tratamento';
+export type CardType = 'virus' | 'bacteria' | 'fisica' | 'estado' | 'mental' | 'tratamento';
 
 /** Stats que as cartas podem modificar. Para um stat novo, adiciona-o aqui e em CONFIG.baseStats. */
-export type StatName = 'maxHp' | 'maxEnergy' | 'energyRegen' | 'virusDamageTaken' | 'bacteriaDamageTaken';
+export type StatName = 'maxHp' | 'maxEnergy' | 'energyRegen' | 'virusDamageTaken' | 'bacteriaDamageTaken' | 'healingTaken';
 export type Stats = Record<StatName, number>;
 
 export interface StatModifier {
@@ -54,6 +54,8 @@ export interface PlayerState {
   /** Cartas da mão que vieram de fora do baralho (Alzheimer): quando jogadas desaparecem em vez de voltar à fila. */
   borrowed: boolean[];
   effects: ActiveEffect[];
+  /** Fração de dano por aplicar (quando há multiplicadores como o do Antiviral). */
+  damageCarry: number;
 }
 
 /** Eventos para a interface animar (dano a flutuar, carta jogada, ...). */
@@ -65,6 +67,8 @@ export type GameEvent =
   | { type: 'blocked'; player: PlayerIndex; cardId: string }
   | { type: 'cured'; player: PlayerIndex; cardId: string }
   | { type: 'surrender'; player: PlayerIndex }
+  /** `player` espirrou: passou uma cópia de `cardId` ao adversário. */
+  | { type: 'spread'; player: PlayerIndex; cardId: string }
   /** A doença que `player` jogou também o infetou a ele. */
   | { type: 'contagion'; player: PlayerIndex; cardId: string };
 

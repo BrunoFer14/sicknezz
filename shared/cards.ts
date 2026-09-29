@@ -23,6 +23,7 @@ export const CARD_TYPES: Record<CardType, { name: string; emoji: string }> = {
   virus: { name: 'Vírus', emoji: '🦠' },
   bacteria: { name: 'Bactéria', emoji: '🧫' },
   fisica: { name: 'Física', emoji: '🍔' },
+  estado: { name: 'Estado', emoji: '🩹' },
   mental: { name: 'Mental', emoji: '🧠' },
   tratamento: { name: 'Tratamento', emoji: '💊' },
 };
@@ -44,7 +45,7 @@ export const CARDS = defineCards({
   },
   gripe: {
     name: 'Gripe',
-    emoji: '🤧',
+    emoji: '🥶',
     type: 'virus',
     cost: 2,
     description: 'Tira 9 de vida em 6 segundos.',
@@ -80,6 +81,25 @@ export const CARDS = defineCards({
     permanent: true,
     effects: [{ mechanic: 'infection', params: { perSecond: 3, total: 100, cureChance: 0.1 } }],
   },
+  sarampo: {
+    name: 'Sarampo',
+    emoji: '🔴',
+    type: 'virus',
+    cost: 3,
+    description: 'Tira 12 de vida em 8 segundos. Contágio: 40% de hipótese de também te infetar a ti.',
+    target: 'opponent',
+    contagion: 0.4,
+    effects: [{ mechanic: 'damageOverTime', params: { amount: 12, duration: 8 } }],
+  },
+  espirro: {
+    name: 'Espirro',
+    emoji: '🤧',
+    type: 'virus',
+    cost: 3,
+    description: 'Passa ao adversário uma cópia da tua doença mais forte (vírus ou bactéria, não permanente), com a duração completa. Tu continuas com ela.',
+    target: 'opponent',
+    effects: [{ mechanic: 'spread', params: { types: ['virus', 'bacteria'] } }],
+  },
   sida: {
     name: 'SIDA',
     emoji: '🎗️',
@@ -89,9 +109,9 @@ export const CARDS = defineCards({
     target: 'opponent',
     permanent: true,
     effects: [
-      // 'set' em vez de 'mul' para não acumular se for jogada várias vezes.
-      { mechanic: 'statModifier', params: { stat: 'virusDamageTaken', op: 'set', value: 2 } },
-      { mechanic: 'statModifier', params: { stat: 'bacteriaDamageTaken', op: 'set', value: 2 } },
+      // Não acumula (regra geral); 'mul' para o Antiviral a poder compensar.
+      { mechanic: 'statModifier', params: { stat: 'virusDamageTaken', op: 'mul', value: 2 } },
+      { mechanic: 'statModifier', params: { stat: 'bacteriaDamageTaken', op: 'mul', value: 2 } },
     ],
   },
 
@@ -122,10 +142,10 @@ export const CARDS = defineCards({
     emoji: '🩻',
     type: 'bacteria',
     cost: 5,
-    description: 'Tira 18 de vida em 16s e reduz a regeneração de energia em 20% durante esse tempo.',
+    description: 'Tira 16 de vida em 16s e reduz a regeneração de energia em 20% durante esse tempo.',
     target: 'opponent',
     effects: [
-      { mechanic: 'damageOverTime', params: { amount: 18, duration: 16 } },
+      { mechanic: 'damageOverTime', params: { amount: 16, duration: 16 } },
       { mechanic: 'statModifier', params: { stat: 'energyRegen', op: 'mul', value: 0.8, duration: 16 } },
     ],
   },
@@ -137,6 +157,19 @@ export const CARDS = defineCards({
     description: 'Tira 8 de vida, +6 por cada vírus ou bactéria ativa no adversário.',
     target: 'opponent',
     effects: [{ mechanic: 'damagePerDisease', params: { base: 8, per: 6, types: ['virus', 'bacteria'] } }],
+  },
+
+  lepra: {
+    name: 'Lepra',
+    emoji: '🖐️',
+    type: 'bacteria',
+    cost: 3,
+    description: 'Tira 5 de vida em 10s e, durante esse tempo, o adversário não recebe curas.',
+    target: 'opponent',
+    effects: [
+      { mechanic: 'damageOverTime', params: { amount: 5, duration: 10 } },
+      { mechanic: 'statModifier', params: { stat: 'healingTaken', op: 'set', value: 0, duration: 10 } },
+    ],
   },
 
   // ---------- Físicas ----------
@@ -185,19 +218,23 @@ export const CARDS = defineCards({
     target: 'opponent',
     effects: [{ mechanic: 'damagePerDisease', params: { base: 6, per: 7, types: ['fisica'] } }],
   },
+  // ---------- Estados ----------
   fratura: {
     name: 'Fratura',
     emoji: '🦴',
-    type: 'fisica',
+    type: 'estado',
     cost: 3,
-    description: 'Durante 10s o adversário só pode jogar cartas até custo 4.',
+    description: 'Durante 10s o adversário só pode jogar cartas até custo 4 e não pode fazer Exercício.',
     target: 'opponent',
-    effects: [{ mechanic: 'costLimit', params: { max: 4, duration: 10 } }],
+    effects: [
+      { mechanic: 'costLimit', params: { max: 4, duration: 10 } },
+      { mechanic: 'forbidCards', params: { cards: ['exercicio'], duration: 10 } },
+    ],
   },
   avc: {
     name: 'AVC',
     emoji: '🚑',
-    type: 'fisica',
+    type: 'estado',
     cost: 3,
     description: 'Durante 5s o adversário não pode jogar as 2 cartas mais à esquerda da mão.',
     target: 'opponent',
@@ -206,11 +243,21 @@ export const CARDS = defineCards({
   alergia: {
     name: 'Alergia',
     emoji: '🌼',
-    type: 'fisica',
+    type: 'estado',
     cost: 2,
     description: 'O próximo tratamento do adversário custa +2 de energia. Passa quando ele jogar um tratamento.',
     target: 'opponent',
     effects: [{ mechanic: 'costIncrease', params: { types: ['tratamento'], amount: 2 } }],
+  },
+
+  fadiga: {
+    name: 'Fadiga',
+    emoji: '😪',
+    type: 'estado',
+    cost: 4,
+    description: 'Durante 8s todas as cartas do adversário custam +1 de energia.',
+    target: 'opponent',
+    effects: [{ mechanic: 'costUp', params: { amount: 1, duration: 8 } }],
   },
 
   // ---------- Mentais ----------
@@ -353,12 +400,33 @@ export const CARDS = defineCards({
     emoji: '🚧',
     type: 'tratamento',
     cost: 3,
-    description: 'Durante 5s nenhum jogador pode jogar doenças (só tratamentos).',
+    description: 'Durante 5s nenhum jogador pode jogar vírus nem bactérias.',
     target: 'self',
     effects: [
-      { mechanic: 'forbidTypes', params: { types: ['virus', 'bacteria', 'fisica', 'mental'], duration: 5 } },
-      { mechanic: 'forbidTypes', params: { types: ['virus', 'bacteria', 'fisica', 'mental'], duration: 5 }, target: 'opponent' },
+      { mechanic: 'forbidTypes', params: { types: ['virus', 'bacteria'], duration: 5 } },
+      { mechanic: 'forbidTypes', params: { types: ['virus', 'bacteria'], duration: 5 }, target: 'opponent' },
     ],
+  },
+  repouso: {
+    name: 'Repouso',
+    emoji: '🛌',
+    type: 'tratamento',
+    cost: 3,
+    description: 'Cura todos os Estados e recuperas 4 de vida.',
+    target: 'self',
+    effects: [
+      { mechanic: 'cleanse', params: { types: ['estado'] } },
+      { mechanic: 'heal', params: { amount: 4 } },
+    ],
+  },
+  antiviral: {
+    name: 'Antiviral',
+    emoji: '🧪',
+    type: 'tratamento',
+    cost: 3,
+    description: 'Durante 12s os vírus fazem-te metade do dano (anula o efeito da SIDA enquanto dura).',
+    target: 'self',
+    effects: [{ mechanic: 'statModifier', params: { stat: 'virusDamageTaken', op: 'mul', value: 0.5, duration: 12 } }],
   },
   antibiotico: {
     name: 'Antibiótico',

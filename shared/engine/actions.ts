@@ -7,8 +7,13 @@ import type { CardType, GameState, PlayerIndex } from './types';
 export function damage(state: GameState, target: PlayerIndex, amount: number, type?: CardType) {
   const p = state.players[target];
   const stats = computeStats(p);
-  if (type === 'virus') amount = Math.round(amount * stats.virusDamageTaken);
-  else if (type === 'bacteria') amount = Math.round(amount * stats.bacteriaDamageTaken);
+  const mult = type === 'virus' ? stats.virusDamageTaken : type === 'bacteria' ? stats.bacteriaDamageTaken : 1;
+  if (mult !== 1) {
+    // Com multiplicador, as frações acumulam (ex.: metade de 1 ponto, duas vezes, dá 1 ponto).
+    p.damageCarry += amount * mult;
+    amount = Math.floor(p.damageCarry + 1e-9);
+    p.damageCarry -= amount;
+  }
   const real = Math.min(p.hp, amount);
   if (real <= 0) return;
   p.hp -= real;
@@ -17,7 +22,8 @@ export function damage(state: GameState, target: PlayerIndex, amount: number, ty
 
 export function heal(state: GameState, target: PlayerIndex, amount: number) {
   const p = state.players[target];
-  const real = Math.min(computeStats(p).maxHp - p.hp, amount);
+  const stats = computeStats(p);
+  const real = Math.min(stats.maxHp - p.hp, Math.round(amount * stats.healingTaken));
   if (real <= 0) return;
   p.hp += real;
   state.events.push({ type: 'heal', player: target, amount: real });

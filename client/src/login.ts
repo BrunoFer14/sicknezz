@@ -49,7 +49,7 @@ export class LoginScreen {
       <h1 class="logo">SICK<span>NEZZ</span></h1>
       <p class="tagline">Infeta o teu adversário antes que ele te infete a ti.</p>
       <div class="panel login-panel">${body}</div>
-      <p class="lobby-footer"><a href="/cartas">📖 Ver as cartas</a> · <a href="/privacidade.html">Política de Privacidade</a></p>`;
+      <p class="lobby-footer"><a href="/cartas">📖 Ver as cartas</a> · <a href="/patch-notes">📰 Patch notes</a> · <a href="/privacidade.html">Política de Privacidade</a></p>`;
     if (!this.root.isConnected) this.container.append(this.root);
   }
 }

@@ -38,10 +38,14 @@ export function cardRoles(id: string): Set<Role> {
       case 'gainEnergyOverTime':
         roles.add('energia');
         break;
-      case 'statModifier':
-        // Energia máxima/regeneração conta como energia; vida máxima e multiplicadores de dano contam como dano.
-        roles.add(e.params.stat === 'energyRegen' || e.params.stat === 'maxEnergy' ? 'energia' : 'dano');
+      case 'statModifier': {
+        const { stat } = e.params;
+        if (stat === 'energyRegen' || stat === 'maxEnergy') roles.add('energia');
+        else if (stat === 'healingTaken') roles.add('controlo'); // Lepra
+        else if (stat.endsWith('DamageTaken')) roles.add(card.target === 'self' ? 'imunidade' : 'dano'); // Antiviral / SIDA
+        else roles.add('dano');
         break;
+      }
       case 'forbidTypes':
         roles.add('imunidade');
         roles.add('controlo');

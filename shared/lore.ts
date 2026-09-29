@@ -31,6 +31,14 @@ export const LORE: Partial<Record<CardId, CardLore>> = {
     what: 'Febre hemorrágica grave causada pelo vírus Ébola. Transmite-se pelo contacto com sangue e outros fluidos de pessoas ou animais infetados e tem uma mortalidade muito elevada.',
     history: 'Foi identificado em 1976, perto do rio Ébola, na atual República Democrática do Congo — o rio deu-lhe o nome. O maior surto aconteceu na África Ocidental entre 2014 e 2016, com mais de 11 000 mortos.',
   },
+  sarampo: {
+    what: 'Infeção viral muito contagiosa, com febre alta e manchas vermelhas pelo corpo. Transmite-se pelo ar: cerca de 9 em cada 10 pessoas não vacinadas que convivem com um doente acabam por apanhá-lo — daí o contágio alto no jogo.',
+    history: 'A vacina contra o sarampo existe desde 1963 e hoje faz parte da vacina tríplice (sarampo, papeira e rubéola). Quando a vacinação desce, o sarampo volta rapidamente, como aconteceu em vários países europeus na última década.',
+  },
+  espirro: {
+    what: 'Um espirro lança milhares de gotículas a vários metros de distância — é uma das principais formas de se passar uma gripe, uma constipação ou uma tuberculose a quem está perto. Quem espirra continua doente; só passou a doença a mais alguém.',
+    history: 'Em 1942, fotografias de alta velocidade feitas nos Estados Unidos mostraram pela primeira vez a nuvem de gotículas de um espirro — e ajudaram a popularizar o conselho de espirrar para o cotovelo ou para um lenço.',
+  },
   sida: {
     what: 'A SIDA é a fase avançada da infeção pelo VIH, um vírus que ataca as defesas do corpo. Sem defesas, outras infeções tornam-se muito mais perigosas — é por isso que, no jogo, vírus e bactérias fazem o dobro do dano.',
     history: 'Os primeiros casos foram descritos em 1981 e o VIH foi descoberto em 1983 no Instituto Pasteur, em Paris (Prémio Nobel em 2008). Desde meados dos anos 1990, os antirretrovirais transformaram-na numa doença crónica controlável. O laço vermelho 🎗️ é o símbolo da luta contra a SIDA.',
@@ -52,6 +60,11 @@ export const LORE: Partial<Record<CardId, CardLore>> = {
   sepsis: {
     what: 'Emergência médica em que a resposta do corpo a uma infeção fica descontrolada e começa a danificar os próprios órgãos. Quanto mais infeções houver, pior — como no jogo.',
     history: 'A palavra vem do grego e quer dizer "putrefação". Em 1847, o médico Ignaz Semmelweis mostrou que lavar as mãos reduzia drasticamente as infeções mortais nas maternidades.',
+  },
+
+  lepra: {
+    what: 'Infeção crónica causada pela bactéria Mycobacterium leprae, hoje chamada hanseníase. Ataca a pele e os nervos: sem sensibilidade, as feridas passam despercebidas e não saram bem — por isso, no jogo, bloqueia as curas. Tem cura com antibióticos.',
+    history: 'Foi uma das doenças mais estigmatizadas da história, com os doentes isolados em leprosarias. Em 1873, o médico norueguês Gerhard Armauer Hansen identificou a bactéria — uma das primeiras associadas a uma doença humana. Desde os anos 1980, a OMS distribui gratuitamente o tratamento com vários antibióticos.',
   },
 
   // ---------- Físicas ----------
@@ -86,6 +99,11 @@ export const LORE: Partial<Record<CardId, CardLore>> = {
   alergia: {
     what: 'Reação exagerada do sistema imunitário a coisas normalmente inofensivas, como pólen, ácaros ou certos alimentos. Pode ir de espirros e comichão a reações graves.',
     history: 'A palavra "alergia" foi criada em 1906 pelo pediatra austríaco Clemens von Pirquet. A "febre dos fenos" (alergia ao pólen) tinha sido descrita em 1819 pelo médico inglês John Bostock, que sofria dela.',
+  },
+
+  fadiga: {
+    what: 'Cansaço intenso e persistente, que não passa com uma noite de sono. Pode vir de falta de descanso, de stress ou de uma doença, e faz com que qualquer tarefa pareça custar mais — no jogo, todas as cartas custam mais energia.',
+    history: 'A "síndrome de fadiga crónica" só foi reconhecida como doença nos anos 1980. Durante muito tempo, quem sofria dela era acusado de preguiça, o que hoje se sabe estar errado.',
   },
 
   // ---------- Mentais ----------
@@ -148,8 +166,16 @@ export const LORE: Partial<Record<CardId, CardLore>> = {
     history: 'O primeiro laboratório de psicologia experimental foi fundado por Wilhelm Wundt em Leipzig, na Alemanha, em 1879 — considerado o nascimento da psicologia como ciência.',
   },
   quarentena: {
-    what: 'Isolamento de pessoas que podem ter sido expostas a uma doença contagiosa, para evitar que a espalhem. No jogo, ninguém consegue infetar ninguém durante uns segundos.',
+    what: 'Isolamento de pessoas que podem ter sido expostas a uma doença contagiosa, para evitar que a espalhem. No jogo, durante uns segundos, ninguém consegue passar vírus nem bactérias a ninguém.',
     history: 'A palavra vem do italiano "quaranta giorni" (40 dias): durante a Peste Negra, no século XIV, os navios que chegavam a Veneza tinham de esperar esse tempo antes de desembarcar.',
+  },
+  repouso: {
+    what: 'Descansar dá ao corpo tempo para reparar ossos, músculos e tecidos lesionados. Para muitas lesões e estados de esgotamento, é o primeiro tratamento — no jogo, cura todos os Estados.',
+    history: 'Em 1863, o cirurgião inglês John Hilton publicou "Rest and Pain" (Repouso e Dor), defendendo que o repouso era essencial para a recuperação de lesões — uma ideia que ainda hoje orienta a medicina.',
+  },
+  antiviral: {
+    what: 'Medicamentos que travam a multiplicação de um vírus no corpo. Não o eliminam de uma vez, mas tornam a doença mais leve e mais curta — no jogo, os vírus fazem metade do dano.',
+    history: 'O aciclovir, contra o herpes, foi um dos primeiros antivirais eficazes (anos 1970). Em 1996, as combinações de antirretrovirais transformaram a infeção pelo VIH numa doença controlável — por isso, no jogo, o Antiviral anula o efeito da SIDA enquanto dura.',
   },
   antibiotico: {
     what: 'Medicamento que mata bactérias ou impede que se multipliquem. Não funciona contra vírus — nem no jogo, nem na vida real. O uso excessivo cria bactérias resistentes, uma das grandes ameaças à saúde.',

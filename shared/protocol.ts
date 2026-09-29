@@ -1,7 +1,7 @@
 // Mensagens trocadas entre cliente e servidor + a "vista" do jogo que cada jogador recebe.
 import { getCard } from './cards';
 import { computeStats } from './engine/stats';
-import { cardCost, forbiddenTypes, lockedSlots, maxPlayableCost } from './engine/game';
+import { cardCost, forbiddenCards, forbiddenTypes, lockedSlots, maxPlayableCost } from './engine/game';
 import type { ReplayData } from './engine/replay';
 import type { GameEvent, GameState, PlayerIndex, PlayerState, Side, Stats } from './engine/types';
 
@@ -219,7 +219,7 @@ export function makeView(state: GameState, you: PlayerIndex, events: GameEvent[]
       borrowed: [...me.borrowed],
       next: me.deck[0] ?? me.hand[0],
       maxCost: maxPlayableCost(me),
-      locked: me.hand.map((id, i) => lockedSlots(me).has(i) || forbiddenTypes(me).has(getCard(id).type)),
+      locked: me.hand.map((id, i) => lockedSlots(me).has(i) || forbiddenTypes(me).has(getCard(id).type) || forbiddenCards(me).has(id)),
       blind,
     },
     opp: { ...playerView(opp, oi), handCount: opp.hand.length },

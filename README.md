@@ -44,6 +44,7 @@ Estes valores estão em [shared/engine/config.ts](shared/engine/config.ts).
 | 🦠 Vírus       | dano ao longo do tempo                    | Hospital (a Vacina só previne) |
 | 🧫 Bactéria    | dano que escala com outras doenças        | Antibiótico    |
 | 🍔 Física      | enfraquece até ser curada (energia, vida) | Exercício      |
+| 🩹 Estado      | limita o que o adversário pode jogar      | Repouso        |
 | 🧠 Mental      | ataca a energia                           | Terapia        |
 | 💊 Tratamento  | cura e dá bónus a quem joga               | —              |
 
@@ -134,6 +135,9 @@ O TypeScript valida os `params` de cada mecânica, e o editor dá autocomplete. 
 | `blind`             | `duration`                                        | Paranoia              |
 | `lockSlots`         | `slots`, `duration`                               | AVC                   |
 | `forbidTypes`       | `types`, `duration`                               | Quarentena            |
+| `forbidCards`       | `cards`, `duration`                               | Fratura               |
+| `costUp`            | `amount`, `duration`                              | Fadiga                |
+| `spread`            | `types`                                          | Espirro               |
 
 Stats que se podem modificar: `maxHp`, `maxEnergy`, `energyRegen`. Se o `statModifier` não tiver `duration`, o efeito é permanente. O mesmo acontece com o `infection` sem `total`.
 
@@ -180,3 +184,7 @@ O ID de cliente não é secreto. Guarda-se só o identificador da conta Google e
 ## Páginas das cartas
 
 Cada carta tem uma página em `/cartas/<id>` (lista em `/cartas`): o que faz, o que a cura/bloqueia, sinergias, estatísticas, o que é na vida real e um pouco de história. Os textos estão em [shared/lore.ts](shared/lore.ts) e as artes alternativas em [shared/arts.ts](shared/arts.ts) (hoje todas usam o emoji).
+
+## Patch notes
+
+As novidades de cada versão estão em `/patch-notes` (botão no lobby). Para uma versão nova, junta uma entrada no topo de `PATCH_NOTES` em [client/src/patchnotes.ts](client/src/patchnotes.ts); o botão mostra "NOVO" a quem ainda não a viu.

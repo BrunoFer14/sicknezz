@@ -2,6 +2,7 @@
 // as doenças ativas) e dá uma pontuação a cada carta; joga a melhor quando tiver energia para ela.
 import { getCard, validateDeck, type CardDef } from '../shared/cards';
 import { cardCost, lockedSlots, maxPlayableCost, other } from '../shared/engine/game';
+import { spreadable } from '../shared/engine/mechanics';
 import { computeStats } from '../shared/engine/stats';
 import type { CardType, GameState, PlayerIndex, PlayerState, Side } from '../shared/engine/types';
 
@@ -81,7 +82,7 @@ export class Bot {
     const options: (BotMove & { score: number })[] = [];
     p.hand.forEach((id, handIndex) => {
       const cost = cardCost(p, id);
-      if (locked.has(handIndex) || (max !== null && cost > max) || cost > maxEnergy) return;
+      if (locked.has(handIndex) || (max !== null && getCard(id).cost > max) || cost > maxEnergy) return;
       const card = getCard(id);
       const side: Side = card.target === 'self' ? 'self' : card.target === 'any' ? this.pickSide(state, card) : 'opponent';
       const value = this.value(state, card, side);
@@ -113,7 +114,7 @@ export class Bot {
     const target = side === 'self' ? me : opp;
     const hostile = target !== me;
 
-    if (hostile && opp.effects.some((e) => e.blocks.includes(card.type))) return 0; // imune: seria desperdício
+    if (hostile && !card.effects.some((e) => e.mechanic === 'spread') && opp.effects.some((e) => e.blocks.includes(card.type))) return 0; // imune: seria desperdício
     // Não acumula: voltar a jogar a mesma doença quase não vale nada.
     const alreadyActive = hostile && target.effects.some((e) => getCard(e.cardId).name === card.name && e.source === this.me);
 
@@ -160,17 +161,34 @@ export class Bot {
           value += me.energy < 6 ? e.params.amount * 2.5 : 1;
           break;
         case 'statModifier': {
-          const { stat, op, value: v } = e.params;
+          const { stat, value: v } = e.params;
           const dur = e.params.duration ?? 40;
           if (stat === 'energyRegen') value += Math.abs(1 - v) * dur * 0.8;
           else if (stat === 'maxEnergy') value += Math.abs(v) * 3;
           else if (stat === 'maxHp') value += Math.abs(v) * 0.7;
-          else if (op === 'set') value += target.effects.some((x) => x.cardId === 'sida') ? 0 : 14; // SIDA
+          else if (stat === 'healingTaken') value += opp.hp < computeStats(opp).maxHp - 10 ? 8 : 3; // Lepra
+          else if (side === 'self') {
+            // Antiviral: vale pelos vírus ativos em mim.
+            const viruses = new Set(me.effects.filter((x) => x.source !== this.me && x.cardType === 'virus').map((x) => x.playId)).size;
+            value += viruses * 6;
+          } else value += 14; // SIDA
+          break;
+        }
+        case 'spread': {
+          // Espirro: vale mais ou menos o que a doença copiada vale (se o adversário não estiver protegido).
+          const id = spreadable(state, this.me, e.params.types);
+          if (id && !opp.effects.some((x) => x.blocks.includes(getCard(id).type))) value += getCard(id).cost * 4;
           break;
         }
         case 'forbidTypes':
           // Quarentena: vale a pena quando o adversário tem energia para atacar.
           value += opp.energy >= 5 ? 7 : 2;
+          break;
+        case 'costUp':
+          value += opp.energy >= 4 ? 7 : 4;
+          break;
+        case 'forbidCards':
+          value += opp.hand.some((id) => e.params.cards.includes(id)) ? 3 : 0.5;
           break;
         case 'costLimit':
         case 'lockSlots':

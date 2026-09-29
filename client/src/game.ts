@@ -296,7 +296,7 @@ export class GameScreen {
       (el.querySelector('.cost') as HTMLElement).textContent = String(cost);
       el.classList.toggle('taxed', cost > getCard(id).cost);
       el.classList.toggle('borrowed', borrowed[i]);
-      el.classList.toggle('locked', maxCost !== null && cost > maxCost && !locked[i]);
+      el.classList.toggle('locked', maxCost !== null && getCard(id).cost > maxCost && !locked[i]);
       el.classList.toggle('slot-locked', locked[i]);
       showCharge(el, energy, cost);
       if (this.dragGhost?.index === i) showCharge(this.dragGhost.el, energy, cost);
@@ -325,12 +325,12 @@ export class GameScreen {
       return false;
     }
     if (v.me.locked[index]) {
-      this.toast('Esta carta está bloqueada (AVC ou Quarentena)');
+      this.toast('Esta carta está bloqueada agora');
       sfx.error();
       this.shake(this.handSlots[index]);
       return false;
     }
-    if (v.me.maxCost !== null && v.me.costs[index] > v.me.maxCost) {
+    if (v.me.maxCost !== null && getCard(id).cost > v.me.maxCost) {
       this.toast(`Fratura: só podes jogar cartas até custo ${v.me.maxCost}`);
       sfx.error();
       this.shake(this.handSlots[index]);
@@ -491,6 +491,12 @@ export class GameScreen {
         const name = escapeHtml(getCard(e.cardId).name);
         this.float(mine(e.player) ? this.hud.me : this.hud.opp, `Imune a ${getCard(e.cardId).name}!`, 'info');
         this.log(view, e.cardId, mine(e.player) ? `Estavas imune a <b>${name}</b>` : `O adversário estava imune a <b>${name}</b>`, 'info');
+        break;
+      }
+      case 'spread': {
+        const name = escapeHtml(getCard(e.cardId).name);
+        this.float(mine(e.player) ? this.hud.opp : this.hud.me, `Espirro: ${getCard(e.cardId).name}!`, 'info');
+        this.log(view, e.cardId, mine(e.player) ? `🤧 Passaste <b>${name}</b> ao adversário` : `🤧 O adversário passou-te <b>${name}</b>`, mine(e.player) ? 'me' : 'opp');
         break;
       }
       case 'contagion': {

@@ -15,6 +15,8 @@ export interface MechanicContext {
   source: PlayerIndex;
   /** Tipo da carta que criou o efeito. */
   cardType: CardType;
+  /** Joga os efeitos de outra carta de `source` em `target`, como se fosse jogada agora (ver Espirro). */
+  cast: (cardId: string) => void;
 }
 
 export interface MechanicDef<P> {
@@ -42,6 +44,24 @@ export interface MechanicDef<P> {
   lockedSlots?: (params: P) => number[];
   /** Tipos de carta que o dono do efeito não pode jogar enquanto está ativo. */
   forbids?: (params: P) => CardType[];
+  /** Cartas (ids) que o dono do efeito não pode jogar enquanto está ativo. */
+  forbidsCards?: (params: P) => string[];
+  /** Mensagem de erro se a carta não puder ser jogada agora (é verificado antes de pagar). */
+  requires?: (state: GameState, source: PlayerIndex, params: P) => string | null;
+  /** O próprio efeito trata das imunidades do alvo (o jogo não as verifica pelo tipo da carta). */
+  ownImmunity?: boolean;
+}
+
+/** A doença mais forte (mais cara) destes tipos que `player` tem ativa e que se pode passar (não permanente). */
+export function spreadable(state: GameState, player: PlayerIndex, types: CardType[]): string | null {
+  let best: string | null = null;
+  for (const e of state.players[player].effects) {
+    if (e.source === player || !types.includes(e.cardType)) continue;
+    const card = getCard(e.cardId);
+    if (card.permanent) continue;
+    if (!best || card.cost > getCard(best).cost) best = e.cardId;
+  }
+  return best;
 }
 
 function defineMechanic<P>(def: MechanicDef<P>): MechanicDef<P> {
@@ -176,6 +196,16 @@ export const MECHANICS = {
     maxCost: (p) => p.max,
   }),
 
+  /** Passa ao alvo uma cópia da doença mais forte destes tipos que quem joga tem (e continua com ela). */
+  spread: defineMechanic<{ types: CardType[] }>({
+    ownImmunity: true,
+    requires: (state, source, p) => (spreadable(state, source, p.types) ? null : 'Não tens nenhum vírus nem bactéria para espirrar.'),
+    onApply: (ctx, p) => {
+      const id = spreadable(ctx.state, ctx.source, p.types);
+      if (id) ctx.cast(id);
+    },
+  }),
+
   /** Durante `duration` segundos o alvo não pode jogar cartas destes tipos. */
   forbidTypes: defineMechanic<{ types: CardType[]; duration: number }>({
     duration: (p) => p.duration,
@@ -198,6 +228,18 @@ export const MECHANICS = {
     onOwnerPlay: (p, e, type) => {
       if (p.types.includes(type)) e.ended = true;
     },
+  }),
+
+  /** Durante `duration` segundos todas as cartas do alvo custam +`amount`. */
+  costUp: defineMechanic<{ amount: number; duration: number }>({
+    duration: (p) => p.duration,
+    costDelta: (p) => p.amount,
+  }),
+
+  /** Durante `duration` segundos o alvo não pode jogar estas cartas. */
+  forbidCards: defineMechanic<{ cards: string[]; duration: number }>({
+    duration: (p) => p.duration,
+    forbidsCards: (p) => p.cards,
   }),
 
   /** Troca a mão do alvo por cartas aleatórias de ambos os baralhos. As cartas originais voltam para o fim da fila. */

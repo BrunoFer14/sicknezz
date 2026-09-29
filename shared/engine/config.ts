@@ -15,6 +15,8 @@ export const CONFIG = {
     // Multiplicadores do dano recebido de cartas destes tipos (a SIDA põe-nos a 2).
     virusDamageTaken: 1,
     bacteriaDamageTaken: 1,
+    // Multiplicador das curas recebidas (a Lepra põe-no a 0).
+    healingTaken: 1,
   } satisfies Stats,
   /**
    * A regeneração de energia acelera ao longo do jogo: a partir de `at` segundos é multiplicada por `mult`.

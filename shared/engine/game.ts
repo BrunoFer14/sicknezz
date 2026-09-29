@@ -18,6 +18,7 @@ function createPlayer(rng: { rng: number }, name: string, deck: readonly string[
     borrowed: new Array(CONFIG.handSize).fill(false),
     deck: cards,
     effects: [],
+    damageCarry: 0,
   };
 }
 
@@ -64,6 +65,13 @@ export function forbiddenTypes(p: PlayerState): Set<CardType> {
   return types;
 }
 
+/** Cartas que o jogador não pode jogar agora (ex.: Exercício com uma Fratura). */
+export function forbiddenCards(p: PlayerState): Set<string> {
+  const ids = new Set<string>();
+  for (const e of p.effects) getMechanic(e.mechanic).forbidsCards?.(e.params).forEach((id) => ids.add(id));
+  return ids;
+}
+
 /** Posições da mão que o jogador não pode jogar agora (ex.: AVC). */
 export function lockedSlots(p: PlayerState): Set<number> {
   const locked = new Set<number>();
@@ -82,9 +90,15 @@ export function playCard(state: GameState, player: PlayerIndex, handIndex: numbe
   const cost = cardCost(p, cardId);
   if (p.energy < cost) return { ok: false, reason: 'Energia insuficiente.' };
   if (lockedSlots(p).has(handIndex)) return { ok: false, reason: 'Esta carta está bloqueada.' };
-  if (forbiddenTypes(p).has(card.type)) return { ok: false, reason: 'Quarentena: não podes jogar doenças agora.' };
+  if (forbiddenTypes(p).has(card.type)) return { ok: false, reason: 'Quarentena: não podes jogar vírus nem bactérias agora.' };
+  if (forbiddenCards(p).has(cardId)) return { ok: false, reason: `Não podes jogar ${card.name} agora.` };
   const max = maxPlayableCost(p);
-  if (max !== null && cost > max) return { ok: false, reason: `Só podes jogar cartas até custo ${max}.` };
+  // A Fratura olha para o custo impresso na carta (sem os aumentos da Alergia/Fadiga).
+  if (max !== null && card.cost > max) return { ok: false, reason: `Só podes jogar cartas até custo ${max}.` };
+  for (const spec of card.effects) {
+    const reason = getMechanic(spec.mechanic).requires?.(state, player, spec.params);
+    if (reason) return { ok: false, reason };
+  }
 
   p.energy -= cost;
   // Ciclo estilo Clash Royale: a carta jogada vai para o fim da fila e entra a próxima.
@@ -103,7 +117,7 @@ export function playCard(state: GameState, player: PlayerIndex, handIndex: numbe
   const replaced = new Set<PlayerIndex>();
   for (const spec of card.effects) {
     const target = resolveTarget(player, spec.target ?? card.target, side);
-    if (target !== player && isImmune(state.players[target], card.type)) {
+    if (target !== player && !getMechanic(spec.mechanic).ownImmunity && isImmune(state.players[target], card.type)) {
       if (!blocked.has(target)) state.events.push({ type: 'blocked', player: target, cardId });
       blocked.add(target);
       continue;
@@ -128,6 +142,20 @@ export function playCard(state: GameState, player: PlayerIndex, handIndex: numbe
   return { ok: true };
 }
 
+/** Joga os efeitos de `cardId` de `source` em `target` como uma jogada nova (duração completa). Usado pelo Espirro. */
+function castCard(state: GameState, source: PlayerIndex, target: PlayerIndex, cardId: string) {
+  const card = getCard(cardId);
+  if (isImmune(state.players[target], card.type)) {
+    state.events.push({ type: 'blocked', player: target, cardId });
+    return;
+  }
+  state.events.push({ type: 'spread', player: source, cardId });
+  const t = state.players[target];
+  t.effects = t.effects.filter((e) => !(e.cardId === cardId && e.source === source));
+  const playId = state.nextUid++;
+  for (const spec of card.effects) applyEffect(state, source, target, cardId, card, spec, playId);
+}
+
 function resolveTarget(source: PlayerIndex, kind: TargetKind, side: Side): PlayerIndex {
   if (kind === 'any') kind = side;
   return kind === 'self' ? source : other(source);
@@ -139,7 +167,7 @@ function isImmune(p: PlayerState, type: CardType): boolean {
 
 function applyEffect(state: GameState, source: PlayerIndex, target: PlayerIndex, cardId: string, card: CardDef, spec: EffectSpec, playId: number) {
   const mech = getMechanic(spec.mechanic);
-  const ctx: MechanicContext = { state, target, source, cardType: card.type };
+  const ctx: MechanicContext = { state, target, source, cardType: card.type, cast: (id) => castCard(state, source, target, id) };
 
   if (!mech.duration) {
     mech.onApply?.(ctx, spec.params, null);
@@ -177,7 +205,7 @@ export function tick(state: GameState, dt: number) {
     for (const e of [...p.effects]) {
       if (!p.effects.includes(e)) continue; // removido por outro efeito neste tick
       const mech = getMechanic(e.mechanic);
-      const ctx: MechanicContext = { state, target, source: e.source, cardType: e.cardType };
+      const ctx: MechanicContext = { state, target, source: e.source, cardType: e.cardType, cast: (id) => castCard(state, e.source, target, id) };
       e.elapsed += dt;
       mech.onTick?.(ctx, e.params, e, dt);
       if (e.ended || (e.duration !== null && e.elapsed >= e.duration)) {
