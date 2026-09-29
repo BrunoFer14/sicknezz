@@ -6,22 +6,28 @@ import { DeckBuilder } from './deckbuilder';
 import { GameScreen } from './game';
 import { identity, resetIdentity, setIdentity } from './identity';
 import { LobbyScreen } from './lobby';
+import { LoginScreen } from './login';
 import { connect } from './net';
 import { ReplayScreen } from './replay';
 import { installPreview } from './preview';
 import { sfx } from './sound';
 import { StatsScreen } from './stats';
 
-type Screen = 'menu' | 'waiting' | 'queue' | 'game' | 'builder' | 'stats' | 'replay' | 'cards';
+type Screen = 'login' | 'menu' | 'waiting' | 'queue' | 'game' | 'builder' | 'stats' | 'replay' | 'cards';
 
 const app = document.getElementById('app')!;
-let screen: Screen = 'menu';
+let screen: Screen = 'login';
 let game: GameScreen | null = null;
 let stats: StatsScreen | null = null;
 let cards: CardsScreen | null = null;
 /** Login com Google: se o servidor o tiver configurado e se há sessão iniciada. */
 let googleClientId: string | null = null;
 let accountName: string | null = null;
+/** Já chegou a primeira resposta do servidor (até lá mostra "a ligar"). */
+let welcomed = false;
+
+/** Com o login da Google configurado no servidor, é obrigatório ter sessão iniciada para jogar. */
+const needsLogin = () => !welcomed || (googleClientId !== null && !accountName);
 
 // Com sessão iniciada, os baralhos ficam guardados na conta.
 onDecksChange((decks) => {
@@ -112,16 +118,18 @@ const lobby = new LobbyScreen(app, {
   },
   openStats,
   openCards: () => navigate('/cartas'),
-  account: () => ({ googleClientId, name: accountName }),
-  login: (credential) => net.send({ t: 'login', credential }),
+  accountName: () => accountName,
   logout: () => {
     net.send({ t: 'logout' });
     resetIdentity();
-    location.reload(); // volta a ligar com um perfil anónimo novo
+    location.reload(); // volta ao ecrã de entrada
   },
 });
+lobby.hide();
+const login = new LoginScreen(app, (credential) => net.send({ t: 'login', credential }));
 
 installPreview();
+queueMicrotask(route); // abre logo /cartas se for esse o endereço
 
 // ---------- Páginas das cartas (/cartas e /cartas/<id>) ----------
 
@@ -142,6 +150,7 @@ function route() {
     return;
   }
   lobby.hide();
+  login.hide();
   stats?.destroy();
   stats = null;
   screen = 'cards';
@@ -150,7 +159,6 @@ function route() {
 }
 
 window.addEventListener('popstate', route);
-route();
 
 function toMenu(message = '') {
   game?.destroy();
@@ -158,6 +166,14 @@ function toMenu(message = '') {
   cards?.destroy();
   cards = null;
   if (location.pathname !== '/') history.pushState(null, '', '/' + location.search);
+  if (needsLogin()) {
+    screen = 'login';
+    lobby.hide();
+    if (welcomed && googleClientId) login.show(googleClientId, message);
+    else login.showConnecting();
+    return;
+  }
+  login.hide();
   screen = 'menu';
   lobby.showMenu(message);
 }
@@ -172,12 +188,13 @@ function onMessage(msg: ServerMsg) {
     case 'account':
       setIdentity(msg.profileId, msg.secret);
       applyAccount(msg.account);
-      if (screen === 'menu') lobby.showMenu();
+      if (screen === 'login' || screen === 'menu') toMenu();
       break;
     case 'welcome':
+      welcomed = true;
       googleClientId = msg.googleClientId;
       applyAccount(msg.account);
-      if (screen === 'menu') lobby.showMenu();
+      if ((screen === 'login' || screen === 'menu') && !msg.resumed) toMenu();
       // A ligação voltou mas a partida/sala já não existe.
       if (!msg.resumed && screen === 'game') toMenu('A partida terminou enquanto estavas sem ligação.');
       else if (!msg.resumed && (screen === 'waiting' || screen === 'queue')) toMenu('A ligação caiu. Tenta outra vez.');
@@ -199,6 +216,7 @@ function onMessage(msg: ServerMsg) {
         cards = null;
         if (screen === 'queue' || screen === 'waiting') sfx.found();
         lobby.hide();
+        login.hide();
         game = new GameScreen(app, net.send, exitGame, { onReplay: () => requestReplay() });
       }
       screen = 'game';
@@ -213,6 +231,7 @@ function onMessage(msg: ServerMsg) {
       break;
     case 'error':
       if (game) game.toast(msg.message);
+      else if (screen === 'login' && googleClientId) login.show(googleClientId, msg.message);
       else lobby.error(msg.message);
       break;
   }

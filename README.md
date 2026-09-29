@@ -168,7 +168,7 @@ Sem login, cada browser recebe uma identidade anónima, guardada no próprio bro
 
 ### Login com Google
 
-O botão "Iniciar sessão com Google" só aparece se a variável `GOOGLE_CLIENT_ID` estiver definida.
+Com a variável `GOOGLE_CLIENT_ID` definida, **é obrigatório iniciar sessão com o Google para jogar**: o jogo abre num ecrã de entrada e o servidor recusa partidas sem sessão. As páginas das cartas e a política de privacidade continuam públicas. Sem a variável (por exemplo, a correr no teu computador), o jogo funciona sem contas.
 
 1. Vai a https://console.cloud.google.com, cria um projeto e, em **APIs e serviços → Ecrã de consentimento OAuth**, configura-o como "Externo" (nome da app: Sicknezz).
 2. Em **APIs e serviços → Credenciais → Criar credenciais → ID de cliente OAuth**, escolhe "Aplicação Web".

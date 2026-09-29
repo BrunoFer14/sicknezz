@@ -722,3 +722,10 @@ a.card-chip:hover { border-color: var(--toxic); }
 }
 .lobby-footer { text-align: center; font-size: 12px; margin: 4px 0 0; }
 .lobby-footer a { color: var(--muted); }
+
+/* Ecrã de entrada */
+.login-logo { width: 132px; height: 132px; margin: 0 auto -8px; display: block; filter: drop-shadow(0 0 24px rgba(143, 227, 74, .35)); }
+.login-panel { align-items: center; text-align: center; gap: 10px; }
+.login-panel .google-btn { min-height: 44px; display: flex; justify-content: center; }
+.login-panel .small { font-size: 12px; }
+.login-wait { margin: 12px 0; }

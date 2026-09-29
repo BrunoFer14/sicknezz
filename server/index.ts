@@ -157,6 +157,10 @@ wss.on('connection', (ws) => {
     }
     if (!conn.session) return; // o cliente tem de dizer "hello" primeiro
 
+    // Com o login da Google configurado, jogar exige sessão iniciada.
+    const playing = msg.t === 'create' || msg.t === 'join' || msg.t === 'queue' || msg.t === 'bot' || msg.t === 'getReplay';
+    if (google && playing && !conn.profile?.googleSub) return send(ws, { t: 'error', message: 'Inicia sessão com o Google para jogar.' });
+
     if (msg.t === 'create' || msg.t === 'join' || msg.t === 'queue' || msg.t === 'bot') {
       const deckError = validateDeck(msg.deck);
       if (deckError) return send(ws, { t: 'error', message: deckError });
