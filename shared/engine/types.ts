@@ -77,4 +77,8 @@ export interface GameState {
   events: GameEvent[];
   /** Todas as cartas dos baralhos dos dois jogadores (sem repetidos). */
   pool: string[];
+  /** Semente da partida (para os replays). */
+  seed: number;
+  /** Estado atual do gerador aleatório (ver random.ts). */
+  rng: number;
 }

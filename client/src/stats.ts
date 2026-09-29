@@ -14,6 +14,8 @@ export class StatsScreen {
   constructor(
     container: HTMLElement,
     private onBack: () => void,
+    /** Ver o replay de uma partida do histórico. */
+    private onReplay: (at: number) => void,
   ) {
     this.root.className = 'stats-screen';
     this.root.innerHTML = `
@@ -43,6 +45,10 @@ export class StatsScreen {
     this.render();
   }
 
+  destroy() {
+    this.root.remove();
+  }
+
   show(stats: StatsPayload) {
     this.stats = stats;
     this.render();
@@ -51,7 +57,11 @@ export class StatsScreen {
   private render() {
     this.root.querySelectorAll<HTMLElement>('[data-tab]').forEach((b) => b.classList.toggle('active', b.dataset.tab === this.tab));
     if (!this.stats) return;
-    const body = this.root.querySelector('.stats-body')!;
+    const body = this.root.querySelector<HTMLElement>('.stats-body')!;
+    body.onclick = (e) => {
+      const btn = (e.target as HTMLElement).closest<HTMLElement>('[data-replay]');
+      if (btn) this.onReplay(Number(btn.dataset.replay));
+    };
     body.innerHTML =
       this.tab === 'me'
         ? this.renderMe()
@@ -139,6 +149,7 @@ function historyRow(m: MatchRecord): string {
         <div class="muted history-meta">${MODE[m.mode]} · ${dur} · ${when}${quit}</div>
       </div>
       <div class="history-deck">${deck}</div>
+      ${m.hasReplay ? `<button class="btn history-replay" data-replay="${m.at}" title="Ver replay">▶️</button>` : ''}
     </div>`;
 }
 

@@ -42,6 +42,18 @@ function showCharge(cardNode: HTMLElement, energy: number, cost: number) {
   (cardNode.querySelector('.charge') as HTMLElement).style.height = `${ready ? 0 : (1 - energy / cost) * 100}%`;
 }
 
+export interface GameScreenOptions {
+  /** Só a ver (replay): sem jogar cartas, sem desistir, sem ecrã final. */
+  replay?: boolean;
+  /** Mostra o botão "Ver replay" no ecrã final. */
+  onReplay?: () => void;
+}
+
+/** Próxima aceleração da energia depois do segundo `time`, ou null se já estiver na última fase. */
+function nextPhase(time: number): { at: number; mult: number } | null {
+  return CONFIG.energyPhases.find((ph) => ph.at > time) ?? null;
+}
+
 export class GameScreen {
   private root = document.createElement('div');
   private view: GameView | null = null;
@@ -53,6 +65,7 @@ export class GameScreen {
   private nextSlot: HTMLElement;
   private nextId: string | null = null;
   private clock: HTMLElement;
+  private phase: HTMLElement;
   private countdown: HTMLElement;
   private overlay: HTMLElement;
   private toastEl: HTMLElement;
@@ -68,6 +81,7 @@ export class GameScreen {
   /** Cópia da carta que está a ser arrastada (tem de acompanhar a energia também). */
   private dragGhost: { index: number; el: HTMLElement } | null = null;
   private onKey = (e: KeyboardEvent) => {
+    if (this.opts.replay) return;
     const n = Number(e.key);
     if (n >= 1 && n <= this.handSlots.length) this.tryPlay(n - 1);
   };
@@ -76,6 +90,7 @@ export class GameScreen {
     container: HTMLElement,
     private send: (msg: ClientMsg) => void,
     private onExit: () => void,
+    private opts: GameScreenOptions = {},
   ) {
     this.root.className = 'game-wrap';
     this.root.innerHTML = `
@@ -86,10 +101,10 @@ export class GameScreen {
         <div class="effects"></div>
       </section>
       <div class="midline">
-        <span class="clock">0:00</span>
+        <div class="timer"><span class="clock">0:00</span><span class="phase"></span></div>
         <button class="icon-btn mute" title="Som"></button>
         <button class="icon-btn log-toggle" title="Histórico">📜</button>
-        <button class="icon-btn surrender" title="Desistir">🏳️</button>
+        <button class="icon-btn surrender" title="Desistir da partida">🏳️ Desistir</button>
       </div>
       <section class="board my-board">
         <div class="zone-label">A tua área</div>
@@ -134,6 +149,11 @@ export class GameScreen {
     this.oppHand = q('.opp-hand');
     this.nextSlot = q('.next-slot');
     this.clock = q('.clock');
+    this.phase = q('.phase');
+    if (opts.replay) {
+      q('.surrender').hidden = true;
+      this.root.classList.add('replaying');
+    }
     this.countdown = q('.countdown');
     this.overlay = q('.overlay');
     this.toastEl = q('.toast');
@@ -171,7 +191,7 @@ export class GameScreen {
     this.updateHud(this.hud.me, view.me);
     this.updateHud(this.hud.opp, view.opp);
     this.updateHand(view);
-    this.updateOppHand(view.opp.handCount);
+    this.updateOppHand(view.opp.handCount, view.opp.hand);
     this.syncEffects(this.board.me, view.me.effects);
     this.board.me.root.classList.toggle('blind', view.me.blind);
     this.syncEffects(this.board.opp, view.opp.effects);
@@ -196,6 +216,12 @@ export class GameScreen {
     }
     this.lastEnergyMult = mult;
     this.clock.title = `Energia ×${fmt(mult)}`;
+    const t = Math.max(0, view.time);
+    const next = nextPhase(t);
+    this.phase.textContent = next
+      ? `⚡ ×${fmt(mult)} · acelera em ${clockText(next.at - t)}`
+      : `⚡ ×${fmt(mult)} · morte súbita`;
+    this.phase.classList.toggle('sudden', !next);
     this.countdown.hidden = view.time >= 0;
     const count = view.time < 0 ? Math.ceil(-view.time) : 0;
     if (count !== this.lastCount) {
@@ -211,6 +237,11 @@ export class GameScreen {
 
     view.events.forEach((e) => this.handleEvent(e, view));
     this.updateOverlay(view);
+  }
+
+  /** Limpa o histórico da partida (usado ao saltar no replay). */
+  clearLog() {
+    this.logList.innerHTML = '<p class="log-empty">Ainda nada aconteceu.</p>';
   }
 
   toast(message: string) {
@@ -276,10 +307,13 @@ export class GameScreen {
     }
   }
 
-  private updateOppHand(count: number) {
-    if (this.oppHand.children.length !== count) {
-      this.oppHand.innerHTML = '<div class="card-back"><span>🦠</span></div>'.repeat(count);
-    }
+  /** `hand`: cartas do adversário à vista (só nos replays). */
+  private updateOppHand(count: number, hand?: string[]) {
+    const key = hand ? hand.join(',') : String(count);
+    if (this.oppHand.dataset.key === key) return;
+    this.oppHand.dataset.key = key;
+    if (hand) this.oppHand.replaceChildren(...hand.map((id) => cardEl(id, 'mini')));
+    else this.oppHand.innerHTML = '<div class="card-back"><span>🦠</span></div>'.repeat(count);
   }
 
   private tryPlay(index: number, side: Side = 'opponent'): boolean {
@@ -324,7 +358,7 @@ export class GameScreen {
     slot.addEventListener('pointerdown', (down) => {
       const id = this.handIds[index];
       const source = slot.firstElementChild as HTMLElement | null;
-      if (!id || !source || down.button !== 0) return;
+      if (!id || !source || down.button !== 0 || this.opts.replay) return;
       down.preventDefault();
 
       const card = getCard(id);
@@ -402,7 +436,7 @@ export class GameScreen {
         el.insertAdjacentHTML(
           'beforeend',
           e.duration === null
-            ? '<div class="e-time perm">Permanente</div>'
+            ? `<div class="e-time perm">${getCard(e.cardId).permanent ? 'Permanente' : 'Até ser curada'}</div>`
             : '<div class="e-timer"><div class="e-fill"></div></div><div class="e-time"></div>',
         );
         board.effects.append(el);
@@ -504,7 +538,7 @@ export class GameScreen {
   // ---------- Fim de jogo ----------
 
   private updateOverlay(view: GameView) {
-    if (view.winner === null) {
+    if (view.winner === null || this.opts.replay) {
       this.overlay.hidden = true;
       return;
     }
@@ -531,11 +565,13 @@ export class GameScreen {
         <p>${escapeHtml(note)}</p>
         <div class="row">
           ${view.opponentConnected ? `<button class="btn primary" id="rematch" ${asked ? 'disabled' : ''}>${asked ? 'À espera…' : 'Revanche'}</button>` : ''}
+          ${this.opts.onReplay ? '<button class="btn" id="replay">▶️ Ver replay</button>' : ''}
           <button class="btn" id="exit">Sair</button>
         </div>
       </div>`;
     this.overlay.querySelector('#rematch')?.addEventListener('click', () => this.send({ t: 'rematch' }));
     this.overlay.querySelector('#exit')!.addEventListener('click', () => this.onExit());
+    this.overlay.querySelector('#replay')?.addEventListener('click', () => this.opts.onReplay?.());
     this.overlay.hidden = false;
   }
 }

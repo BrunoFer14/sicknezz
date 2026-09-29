@@ -1,6 +1,7 @@
 import { WebSocket } from 'ws';
 import { CONFIG } from '../shared/engine/config';
 import { createGame, other, playCard, tick } from '../shared/engine/game';
+import { TICK_DT, type ReplayData, type ReplayMove } from '../shared/engine/replay';
 import type { GameState, PlayerIndex, Side } from '../shared/engine/types';
 import { makeView, type ServerMsg } from '../shared/protocol';
 import { Bot, BOT_LEVELS, botDeck, type BotLevel } from './bot';
@@ -43,6 +44,13 @@ export class Room {
   private recorded = false;
   /** Quem desistiu nesta partida (para o histórico). */
   private surrendered: PlayerIndex | null = null;
+  /** Replay: jogadas feitas, passos de jogo já simulados e tempo acumulado por simular. */
+  private moves: ReplayMove[] = [];
+  private ticks = 0;
+  private acc = 0;
+  private forfeit: ReplayData['forfeit'] = null;
+  /** Replay da última partida desta sala. */
+  lastReplay: ReplayData | null = null;
   private timer: NodeJS.Timeout | null = null;
   private last = 0;
 
@@ -128,6 +136,7 @@ export class Room {
     this.rematch = [false, false];
     if (this.game && this.game.winner === null) {
       this.game.winner = other(i);
+      this.forfeit = { tick: this.ticks, loser: i, surrender: false };
       this.checkGameOver();
     }
     if (!this.hasHumans()) {
@@ -148,6 +157,7 @@ export class Room {
       return;
     }
     this.plays[i][cardId] = (this.plays[i][cardId] ?? 0) + 1;
+    this.moves.push([this.ticks, i, handIndex, side === 'self' ? 1 : 0]);
     this.checkGameOver();
     this.broadcast();
   }
@@ -157,6 +167,7 @@ export class Room {
     if (!this.game || this.game.winner !== null) return;
     this.game.winner = other(i);
     this.surrendered = i;
+    this.forfeit = { tick: this.ticks, loser: i, surrender: true };
     this.game.events.push({ type: 'surrender', player: i });
     this.checkGameOver();
     this.broadcast();
@@ -186,6 +197,10 @@ export class Room {
     }
     this.game = createGame([a.name, b.name], [a.deck, b.deck]);
     this.surrendered = null;
+    this.moves = [];
+    this.ticks = 0;
+    this.acc = 0;
+    this.forfeit = null;
     this.rematch = [false, false];
     this.plays = [{}, {}];
     this.ratingDelta = null;
@@ -204,7 +219,19 @@ export class Room {
     if (!this.game || this.game.winner === null || this.recorded || !this.players) return;
     this.recorded = true;
     const [a, b] = this.players;
+    const g = this.game;
+    this.lastReplay = {
+      v: 1,
+      seed: g.seed,
+      names: [a.name, b.name],
+      decks: [[...a.deck], [...b.deck]],
+      moves: this.moves,
+      endTick: this.ticks,
+      forfeit: this.forfeit,
+      final: [g.players[0].hp, g.players[1].hp],
+    };
     this.ratingDelta = this.hooks.onGameOver({
+      replay: this.lastReplay,
       profiles: [a.profile, b.profile],
       names: [a.name, b.name],
       decks: [a.deck, b.deck],
@@ -218,15 +245,20 @@ export class Room {
 
   private loop() {
     const now = performance.now();
-    const dt = (now - this.last) / 1000;
+    this.acc += Math.min(1, (now - this.last) / 1000);
     this.last = now;
     if (!this.game || this.game.winner !== null) return;
-    tick(this.game, dt);
-    this.seats.forEach((s, i) => {
-      const move = s?.bot?.think(this.game!, dt);
-      if (move && this.game!.winner === null) this.play(i as PlayerIndex, move.handIndex, move.side);
-    });
-    this.checkGameOver();
+    // Passos de tamanho fixo: assim o replay (que volta a simular a partida) dá exatamente o mesmo.
+    while (this.acc >= TICK_DT && this.game.winner === null) {
+      this.acc -= TICK_DT;
+      tick(this.game, TICK_DT);
+      this.ticks++;
+      this.seats.forEach((s, i) => {
+        const move = s?.bot?.think(this.game!, TICK_DT);
+        if (move && this.game!.winner === null) this.play(i as PlayerIndex, move.handIndex, move.side);
+      });
+      this.checkGameOver();
+    }
     this.broadcast();
   }
 

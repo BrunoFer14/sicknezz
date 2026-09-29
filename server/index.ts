@@ -176,6 +176,13 @@ wss.on('connection', (ws) => {
         enter(conn, room, cleanName(msg.name), msg.deck);
         break;
       }
+      case 'getReplay': {
+        const room = conn.room?.lastReplay && msg.at === undefined ? conn.room : null;
+        const found = room ? { replay: room.lastReplay!, you: conn.index } : conn.profile ? store.getReplay(conn.profile, msg.at) : null;
+        if (found) send(ws, { t: 'replay', ...found });
+        else send(ws, { t: 'error', message: 'Replay não encontrado.' });
+        break;
+      }
       case 'surrender':
         conn.room?.surrender(conn.index);
         break;

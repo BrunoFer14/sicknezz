@@ -1,21 +1,14 @@
 import { getCard, type CardDef } from '../cards';
 import { CONFIG, energyMultiplier } from './config';
 import { getMechanic, type EffectSpec, type MechanicContext } from './mechanics';
+import { newSeed, random, shuffle } from './random';
 import { computeStats } from './stats';
 import type { ActiveEffect, CardType, GameState, PlayerIndex, PlayerState, Side, TargetKind } from './types';
 
 export const other = (i: PlayerIndex): PlayerIndex => (i === 0 ? 1 : 0);
 
-function shuffle<T>(arr: T[]): T[] {
-  for (let i = arr.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [arr[i], arr[j]] = [arr[j], arr[i]];
-  }
-  return arr;
-}
-
-function createPlayer(name: string, deck: readonly string[]): PlayerState {
-  const cards = shuffle([...deck]);
+function createPlayer(rng: { rng: number }, name: string, deck: readonly string[]): PlayerState {
+  const cards = shuffle(rng, [...deck]);
   return {
     name,
     hp: CONFIG.baseStats.maxHp,
@@ -28,14 +21,19 @@ function createPlayer(name: string, deck: readonly string[]): PlayerState {
   };
 }
 
-export function createGame(names: [string, string], decks: [readonly string[], readonly string[]]): GameState {
+/** `seed`: a mesma semente (e as mesmas jogadas) dá sempre a mesma partida. */
+export function createGame(names: [string, string], decks: [readonly string[], readonly string[]], seed = newSeed()): GameState {
+  const rng = { rng: seed };
+  const players: [PlayerState, PlayerState] = [createPlayer(rng, names[0], decks[0]), createPlayer(rng, names[1], decks[1])];
   return {
     time: -CONFIG.countdown,
-    players: [createPlayer(names[0], decks[0]), createPlayer(names[1], decks[1])],
+    players,
     winner: null,
     nextUid: 1,
     events: [],
     pool: [...new Set([...decks[0], ...decks[1]])],
+    seed,
+    rng: rng.rng,
   };
 }
 
@@ -112,7 +110,7 @@ export function playCard(state: GameState, player: PlayerIndex, handIndex: numbe
   }
   // Contágio: a doença pode também apanhar quem a jogou (conta como uma doença vinda do adversário).
   const victim = other(player);
-  if (card.contagion && !blocked.has(victim) && Math.random() < card.contagion && !isImmune(p, card.type)) {
+  if (card.contagion && !blocked.has(victim) && random(state) < card.contagion && !isImmune(p, card.type)) {
     state.events.push({ type: 'contagion', player, cardId });
     const contagionPlay = state.nextUid++;
     p.effects = p.effects.filter((e) => !(e.cardId === cardId && e.source === victim));

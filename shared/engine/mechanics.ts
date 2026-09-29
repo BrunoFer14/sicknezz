@@ -3,6 +3,7 @@
 // fica automaticamente disponível (com autocomplete) na definição das cartas.
 import { getCard } from '../cards';
 import { CONFIG } from './config';
+import { random, shuffle } from './random';
 import { countDiseases, damage, drainEnergy, gainEnergy, heal } from './actions';
 import type { ActiveEffect, CardType, GameState, PlayerIndex, StatModifier, StatName, TargetKind } from './types';
 
@@ -115,7 +116,7 @@ export const MECHANICS = {
       const interval = p.cureInterval ?? 1;
       while (e.data.roll >= interval) {
         e.data.roll -= interval;
-        if (Math.random() < p.cureChance) {
+        if (random(state) < p.cureChance) {
           e.ended = true;
           state.events.push({ type: 'cured', player: target, cardId: e.cardId });
           return;
@@ -199,11 +200,10 @@ export const MECHANICS = {
         if (!pl.borrowed[i]) pl.deck.push(id);
       });
       // Sem cartas que trocam a mão, para não haver ciclos infinitos.
-      const pool = state.pool.filter((id) => !getCard(id).effects.some((e) => e.mechanic === 'shuffleHand'));
-      for (let i = pool.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [pool[i], pool[j]] = [pool[j], pool[i]];
-      }
+      const pool = shuffle(
+        state,
+        state.pool.filter((id) => !getCard(id).effects.some((e) => e.mechanic === 'shuffleHand')),
+      );
       pl.hand = pool.slice(0, CONFIG.handSize);
       pl.borrowed = pl.hand.map(() => true);
     },

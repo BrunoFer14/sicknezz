@@ -1,6 +1,7 @@
 // Mensagens trocadas entre cliente e servidor + a "vista" do jogo que cada jogador recebe.
 import { computeStats } from './engine/stats';
 import { cardCost, lockedSlots, maxPlayableCost } from './engine/game';
+import type { ReplayData } from './engine/replay';
 import type { GameEvent, GameState, PlayerIndex, PlayerState, Side, Stats } from './engine/types';
 
 export type ClientMsg =
@@ -15,6 +16,8 @@ export type ClientMsg =
   /** `side`: área onde a carta foi largada (só conta para cartas que se jogam em qualquer lado). */
   | { t: 'play'; handIndex: number; side?: Side }
   | { t: 'surrender' }
+  /** Pede um replay: `at` = partida do histórico; sem `at`, a última partida (da sala atual ou do histórico). */
+  | { t: 'getReplay'; at?: number }
   | { t: 'rematch' }
   | { t: 'leave' }
   | { t: 'stats' };
@@ -26,6 +29,8 @@ export type ServerMsg =
   | { t: 'queued' }
   | { t: 'state'; view: GameView }
   | { t: 'stats'; stats: StatsPayload }
+  /** `you`: o teu lugar nessa partida. */
+  | { t: 'replay'; replay: ReplayData; you: PlayerIndex }
   | { t: 'error'; message: string };
 
 /** Uma carta ativa num jogador (junta todos os efeitos criados pela mesma jogada). */
@@ -64,7 +69,8 @@ export interface GameView {
     blind: boolean;
   };
   /** O adversário não vê as tuas cartas, só quantas tens. */
-  opp: PlayerView & { handCount: number };
+  /** `hand` só existe nos replays (lá vê-se a mão do adversário). */
+  opp: PlayerView & { handCount: number; hand?: string[] };
   events: GameEvent[];
   rematch: [boolean, boolean];
   opponentConnected: boolean;
@@ -131,6 +137,10 @@ export interface MatchRecord {
   ratingDelta: number | null;
   deck: string[];
   surrendered: 'me' | 'opp' | null;
+  /** O teu lugar nessa partida (0 ou 1). */
+  you?: PlayerIndex;
+  /** Há replay guardado desta partida. */
+  hasReplay?: boolean;
 }
 
 export interface StatsPayload {

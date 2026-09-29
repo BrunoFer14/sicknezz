@@ -5,7 +5,11 @@ import { dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { CARD_IDS } from '../shared/cards';
 import type { PlayerIndex } from '../shared/engine/types';
+import type { ReplayData } from '../shared/engine/replay';
 import type { MatchRecord, StatsPayload } from '../shared/protocol';
+
+/** Entrada do histórico tal como fica guardada (com o replay, que só é enviado quando pedido). */
+type StoredMatch = MatchRecord & { replay?: ReplayData };
 
 export interface Profile {
   id: string;
@@ -19,7 +23,7 @@ export interface Profile {
   draws: number;
   cardPlays: Record<string, number>;
   /** Últimas partidas (mais recente primeiro). Perfis antigos não têm. */
-  history?: MatchRecord[];
+  history?: StoredMatch[];
 }
 
 export interface CardStat {
@@ -42,6 +46,7 @@ export interface GameResult {
   duration: number;
   /** Quem desistiu, se alguém desistiu. */
   surrendered: PlayerIndex | null;
+  replay: ReplayData;
 }
 
 /** Quantas partidas se guardam no histórico de cada jogador. */
@@ -199,7 +204,7 @@ export class Store {
     r.profiles.forEach((p, i) => {
       if (!p) return;
       const opp = (1 - i) as PlayerIndex;
-      const entry: MatchRecord = {
+      const entry: StoredMatch = {
         at: Date.now(),
         opponent: r.names[opp],
         result: score(i as PlayerIndex) === 1 ? 'win' : score(i as PlayerIndex) === 0 ? 'loss' : 'draw',
@@ -208,6 +213,8 @@ export class Store {
         ratingDelta: delta?.[i] ?? null,
         deck: [...r.decks[i]],
         surrendered: r.surrendered === null ? null : r.surrendered === i ? 'me' : 'opp',
+        you: i as PlayerIndex,
+        replay: r.replay,
       };
       p.history = [entry, ...(p.history ?? [])].slice(0, HISTORY_SIZE);
     });
@@ -215,6 +222,12 @@ export class Store {
     for (const p of r.profiles) if (p) this.backend.saveProfile(p).catch(logError);
     for (const id of touched) this.backend.saveCard(id, this.cards[id]).catch(logError);
     return delta;
+  }
+
+  /** Replay de uma partida do histórico (`at` identifica a partida; sem `at`, a mais recente). */
+  getReplay(profile: Profile, at?: number): { replay: ReplayData; you: PlayerIndex } | null {
+    const m = at === undefined ? profile.history?.[0] : profile.history?.find((h) => h.at === at);
+    return m?.replay ? { replay: m.replay, you: m.you ?? 0 } : null;
   }
 
   stats(profileId: string | undefined): StatsPayload {
@@ -229,7 +242,8 @@ export class Store {
       me: me && me.games > 0
         ? { name: me.name, rating: me.rating, games: me.games, rankedGames: me.rankedGames, wins: me.wins, losses: me.losses, draws: me.draws, cardPlays: me.cardPlays }
         : null,
-      history: me?.history ?? [],
+      // O replay não vai na lista (só quando for pedido, ver getReplay).
+      history: (me?.history ?? []).map(({ replay, ...m }) => ({ ...m, hasReplay: !!replay })),
       leaderboard,
       cards,
     };

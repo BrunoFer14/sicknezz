@@ -24,6 +24,7 @@ Para produção: `npm run build` e depois `npm start`. O servidor fica em http:/
 - Há um botão 🏳️ para desistir (conta como derrota).
 - **Contra a IA** (🤖, Fácil/Normal/Difícil): treino, não conta para o ranking nem para as estatísticas. A IA está em `server/bot.ts`.
 - **Histórico**: as últimas 30 partidas de cada jogador ficam no perfil (aba 📜 nas estatísticas).
+- **Replays**: cada partida do histórico tem replay (▶️). Não se grava o jogo, só a semente, os baralhos e as jogadas (menos de 1 KB); o motor volta a simular a partida. Para isso o jogo é determinístico: a aleatoriedade usa a semente (`shared/engine/random.ts`) e o servidor avança sempre em passos fixos. Se as cartas mudarem, replays antigos podem deixar de bater certo (aparece "versão antiga").
 - **Contágio**: uma carta com `contagion` (ex.: Covid) tem essa probabilidade de também infetar quem a jogou.
 - **Procurar adversário**: matchmaking automático. Conta para o ranking (pontos Elo, começa em 1000).
 - **Criar sala / código**: partida amigável com um amigo. Conta para as estatísticas, mas não para os pontos.

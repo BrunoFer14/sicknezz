@@ -6,16 +6,50 @@ import { GameScreen } from './game';
 import { identity } from './identity';
 import { LobbyScreen } from './lobby';
 import { connect } from './net';
+import { ReplayScreen } from './replay';
 import { installPreview } from './preview';
 import { sfx } from './sound';
 import { StatsScreen } from './stats';
 
-type Screen = 'menu' | 'waiting' | 'queue' | 'game' | 'builder' | 'stats';
+type Screen = 'menu' | 'waiting' | 'queue' | 'game' | 'builder' | 'stats' | 'replay';
 
 const app = document.getElementById('app')!;
 let screen: Screen = 'menu';
 let game: GameScreen | null = null;
 let stats: StatsScreen | null = null;
+/** Onde voltar quando o replay fechar. */
+let replayFrom: 'menu' | 'stats' = 'menu';
+
+/** Pede ao servidor o replay (`at`: partida do histórico; sem `at`: a partida que acabou agora). */
+function requestReplay(at?: number) {
+  replayFrom = at === undefined ? 'menu' : 'stats';
+  net.send({ t: 'getReplay', at });
+}
+
+function showReplay(msg: Extract<ServerMsg, { t: 'replay' }>) {
+  if (game) net.send({ t: 'leave' }); // sai da sala da partida que acabou
+  game?.destroy();
+  game = null;
+  stats?.destroy();
+  stats = null;
+  lobby.hide();
+  screen = 'replay';
+  new ReplayScreen(app, msg.replay, msg.you, () => (replayFrom === 'stats' ? openStats() : toMenu()));
+}
+
+function openStats() {
+  lobby.hide();
+  screen = 'stats';
+  stats = new StatsScreen(
+    app,
+    () => {
+      stats = null;
+      toMenu();
+    },
+    (at) => requestReplay(at),
+  );
+  net.send({ t: 'stats' });
+}
 
 const netBanner = document.createElement('div');
 netBanner.className = 'net-banner';
@@ -57,15 +91,7 @@ const lobby = new LobbyScreen(app, {
       toMenu();
     });
   },
-  openStats: () => {
-    lobby.hide();
-    screen = 'stats';
-    stats = new StatsScreen(app, () => {
-      stats = null;
-      toMenu();
-    });
-    net.send({ t: 'stats' });
-  },
+  openStats,
 });
 
 installPreview();
@@ -100,16 +126,20 @@ function onMessage(msg: ServerMsg) {
       lobby.showQueue();
       break;
     case 'state':
+      if (screen === 'replay') break;
       if (!game) {
         if (screen === 'queue' || screen === 'waiting') sfx.found();
         lobby.hide();
-        game = new GameScreen(app, net.send, exitGame);
+        game = new GameScreen(app, net.send, exitGame, { onReplay: () => requestReplay() });
       }
       screen = 'game';
       game.update(msg.view);
       break;
     case 'stats':
       stats?.show(msg.stats);
+      break;
+    case 'replay':
+      showReplay(msg);
       break;
     case 'error':
       if (game) game.toast(msg.message);
