@@ -1,4 +1,4 @@
-import { getCard, type CardDef } from '../cards';
+import { CARD_TYPES, getCard, type CardDef } from '../cards';
 import { CONFIG, energyMultiplier } from './config';
 import { getMechanic, type EffectSpec, type MechanicContext } from './mechanics';
 import { newSeed, random, shuffle } from './random';
@@ -65,6 +65,20 @@ export function forbiddenTypes(p: PlayerState): Set<CardType> {
   return types;
 }
 
+/** O alvo tem alguma doença ativa (vinda do adversário) destes tipos? Condição dos Sintomas. */
+export function hasDiseaseOf(p: PlayerState, owner: PlayerIndex, types: CardType[]): boolean {
+  return p.effects.some((e) => e.source !== owner && types.includes(e.cardType));
+}
+
+/** Mensagem a explicar o que falta para jogar um Sintoma, ou null se a condição estiver cumprida. */
+export function unmetRequirement(state: GameState, player: PlayerIndex, card: CardDef): string | null {
+  if (!card.requires) return null;
+  const target = other(player);
+  if (hasDiseaseOf(state.players[target], target, card.requires)) return null;
+  const names = card.requires.map((t) => CARD_TYPES[t].name.toLowerCase());
+  return `${card.name}: o adversário tem de ter ${names.join(' ou ')} ativo.`;
+}
+
 /** Cartas que o jogador não pode jogar agora (ex.: Exercício com uma Fratura). */
 export function forbiddenCards(p: PlayerState): Set<string> {
   const ids = new Set<string>();
@@ -95,6 +109,8 @@ export function playCard(state: GameState, player: PlayerIndex, handIndex: numbe
   const max = maxPlayableCost(p);
   // A Fratura olha para o custo impresso na carta (sem os aumentos da Alergia/Fadiga).
   if (max !== null && card.cost > max) return { ok: false, reason: `Só podes jogar cartas até custo ${max}.` };
+  const unmet = unmetRequirement(state, player, card);
+  if (unmet) return { ok: false, reason: unmet };
   for (const spec of card.effects) {
     const reason = getMechanic(spec.mechanic).requires?.(state, player, spec.params);
     if (reason) return { ok: false, reason };

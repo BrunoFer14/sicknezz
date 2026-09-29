@@ -16,6 +16,8 @@ export interface CardDef {
   permanent?: boolean;
   /** Contágio: probabilidade (0–1) de a doença também infetar quem a jogou. */
   contagion?: number;
+  /** Sintomas: só se pode jogar se o alvo já tiver uma doença ativa destes tipos. */
+  requires?: CardType[];
   effects: EffectSpec[];
 }
 
@@ -25,6 +27,7 @@ export const CARD_TYPES: Record<CardType, { name: string; emoji: string }> = {
   fisica: { name: 'Física', emoji: '🍔' },
   estado: { name: 'Estado', emoji: '🩹' },
   mental: { name: 'Mental', emoji: '🧠' },
+  sintoma: { name: 'Sintoma', emoji: '💢' },
   tratamento: { name: 'Tratamento', emoji: '💊' },
 };
 
@@ -335,6 +338,31 @@ export const CARDS = defineCards({
     description: 'Troca a mão toda por cartas aleatórias dos dois baralhos. Larga na área do adversário para trocar a dele, ou na tua para trocar a tua.',
     target: 'any',
     effects: [{ mechanic: 'shuffleHand', params: {} }],
+  },
+
+  // ---------- Sintomas (só se jogam se o adversário já tiver certa doença) ----------
+  febre: {
+    name: 'Febre',
+    emoji: '🌡️',
+    type: 'sintoma',
+    cost: 2,
+    description: 'Só se o adversário tiver um vírus ou bactéria. Durante 5s, os vírus e bactérias dele fazem +25% de dano.',
+    target: 'opponent',
+    requires: ['virus', 'bacteria'],
+    effects: [
+      { mechanic: 'statModifier', params: { stat: 'virusDamageTaken', op: 'mul', value: 1.25, duration: 5 } },
+      { mechanic: 'statModifier', params: { stat: 'bacteriaDamageTaken', op: 'mul', value: 1.25, duration: 5 } },
+    ],
+  },
+  tosse: {
+    name: 'Tosse',
+    emoji: '😮‍💨',
+    type: 'sintoma',
+    cost: 1,
+    description: 'Só se o adversário tiver um vírus ou bactéria. Tira 2 de vida por cada vírus ou bactéria que ele tenha.',
+    target: 'opponent',
+    requires: ['virus', 'bacteria'],
+    effects: [{ mechanic: 'damagePerDisease', params: { base: 0, per: 2, types: ['virus', 'bacteria'] } }],
   },
 
   // ---------- Tratamentos ----------

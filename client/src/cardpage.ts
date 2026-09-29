@@ -137,7 +137,10 @@ export class CardsScreen {
     ].join('');
 
     let game = '';
-    if (card.type === 'tratamento') {
+    if (card.requires) game += `<div class="info-row"><b>Só se joga se o adversário tiver</b><div>${typeChips(card.requires)}</div></div>`;
+    if (card.type === 'sintoma') {
+      // Os sintomas não são doenças: não se curam nem se bloqueiam (só a doença de que dependem).
+    } else if (card.type === 'tratamento') {
       const { cures, blocks } = treats(card);
       if (cures.length) game += `<div class="info-row"><b>Cura</b><div>${typeChips(cures)}</div></div>`;
       if (blocks.length) game += `<div class="info-row"><b>Protege contra</b><div>${typeChips(blocks)}</div></div>`;

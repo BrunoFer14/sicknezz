@@ -140,6 +140,16 @@ export const LORE: Partial<Record<CardId, CardLore>> = {
     history: 'Foi descrita em 1906 pelo médico alemão Alois Alzheimer, a partir do caso de uma doente chamada Auguste Deter, que perdia progressivamente a memória.',
   },
 
+  // ---------- Sintomas ----------
+  febre: {
+    what: 'Subida da temperatura do corpo, normalmente acima dos 38 °C. É um sinal de que o organismo está a combater uma infeção — por isso, no jogo, só aparece quando já há um vírus ou bactéria, e torna-os mais fortes.',
+    history: 'O termómetro clínico moderno, pequeno e rápido, foi inventado em 1867 pelo médico inglês Thomas Allbutt. Antes disso, medir a febre podia demorar 20 minutos.',
+  },
+  tosse: {
+    what: 'Reflexo que limpa as vias respiratórias de muco, poeiras ou micróbios. É um dos sintomas mais comuns de infeções respiratórias — quanto mais infeções, mais tosse.',
+    history: 'A tosse convulsa, causada por uma bactéria, era uma das principais causas de morte infantil antes da vacina, introduzida nos anos 1940.',
+  },
+
   // ---------- Tratamentos ----------
   cafe: {
     what: 'O café contém cafeína, um estimulante que bloqueia no cérebro os sinais de cansaço (a adenosina). Dá energia durante umas horas — no jogo, literalmente.',

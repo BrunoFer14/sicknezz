@@ -45,6 +45,7 @@ Estes valores estão em [shared/engine/config.ts](shared/engine/config.ts).
 | 🧫 Bactéria    | dano que escala com outras doenças        | Antibiótico    |
 | 🍔 Física      | enfraquece até ser curada (energia, vida) | Exercício      |
 | 🩹 Estado      | limita o que o adversário pode jogar      | Repouso        |
+| 💢 Sintoma     | só se joga se o adversário já tiver certa doença (`requires`), e piora-a | — |
 | 🧠 Mental      | ataca a energia                           | Terapia        |
 | 💊 Tratamento  | cura e dá bónus a quem joga               | —              |
 

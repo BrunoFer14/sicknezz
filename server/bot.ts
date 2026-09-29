@@ -1,7 +1,7 @@
 // IA para o modo "contra o computador". Olha para o estado do jogo como um jogador (a sua mão, a energia,
 // as doenças ativas) e dá uma pontuação a cada carta; joga a melhor quando tiver energia para ela.
 import { getCard, validateDeck, type CardDef } from '../shared/cards';
-import { cardCost, lockedSlots, maxPlayableCost, other } from '../shared/engine/game';
+import { cardCost, lockedSlots, maxPlayableCost, other, unmetRequirement } from '../shared/engine/game';
 import { spreadable } from '../shared/engine/mechanics';
 import { computeStats } from '../shared/engine/stats';
 import type { CardType, GameState, PlayerIndex, PlayerState, Side } from '../shared/engine/types';
@@ -84,6 +84,7 @@ export class Bot {
       const cost = cardCost(p, id);
       if (locked.has(handIndex) || (max !== null && getCard(id).cost > max) || cost > maxEnergy) return;
       const card = getCard(id);
+      if (unmetRequirement(state, this.me, card)) return; // sintoma sem a doença de que precisa
       const side: Side = card.target === 'self' ? 'self' : card.target === 'any' ? this.pickSide(state, card) : 'opponent';
       const value = this.value(state, card, side);
       if (value <= 0) return;
@@ -128,7 +129,7 @@ export class Bot {
           value += this.dmg(opp, card.type, e.params.amount) * 0.9;
           break;
         case 'damagePerDisease':
-          value += this.dmg(opp, card.type, e.params.base + e.params.per * diseases(opp, other(this.me), e.params.types));
+          value += this.dmg(opp, card.type, e.params.base + e.params.per * diseases(opp, this.me, e.params.types));
           break;
         case 'infection':
           value += this.dmg(opp, card.type, e.params.total ? 29 : 20);
@@ -171,7 +172,8 @@ export class Bot {
             // Antiviral: vale pelos vírus ativos em mim.
             const viruses = new Set(me.effects.filter((x) => x.source !== this.me && x.cardType === 'virus').map((x) => x.playId)).size;
             value += viruses * 6;
-          } else value += 14; // SIDA
+          } else if (v >= 2) value += 14; // SIDA
+          else value += diseases(opp, this.me, ['virus', 'bacteria']) * 5; // Febre
           break;
         }
         case 'spread': {

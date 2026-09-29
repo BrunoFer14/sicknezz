@@ -10,6 +10,26 @@ interface PatchNote {
 
 export const PATCH_NOTES: PatchNote[] = [
   {
+    version: '0.8',
+    date: '29/09/2026',
+    title: 'Sintomas',
+    sections: [
+      {
+        title: '💢 Classe nova: Sintoma',
+        items: [
+          'Cartas baratas que só se podem jogar se o adversário já tiver certa doença ativa — e que a pioram.',
+          'Na mão, um sintoma aparece escurecido enquanto a condição não se cumpre; ao tentar jogá-lo, o aviso diz o que falta.',
+          '🌡️ Febre (2): só se o adversário tiver um vírus ou bactéria. Durante 5s, os vírus e bactérias dele fazem +25% de dano.',
+          '😮‍💨 Tosse (1): só se o adversário tiver um vírus ou bactéria. Tira 2 de vida por cada vírus ou bactéria que ele tenha.',
+        ],
+      },
+      {
+        title: '🤖 IA',
+        items: ['Corrigido: a IA não contava as tuas doenças ao avaliar a Pneumonia, a Sépsis e a Diabetes — agora joga-as nos momentos certos.'],
+      },
+    ],
+  },
+  {
     version: '0.7',
     date: '29/09/2026',
     title: 'Estados',

@@ -448,6 +448,7 @@ input:focus { outline: none; border-color: var(--toxic); }
 .type-fisica { --tc: #e0703a; --tc-bg: #3a2620; }
 .type-estado { --tc: #e8c547; --tc-bg: #38331c; }
 .type-mental { --tc: #a77be8; --tc-bg: #2c2340; }
+.type-sintoma { --tc: #ff6f9c; --tc-bg: #3d2130; }
 .type-tratamento { --tc: #4aa8ff; --tc-bg: #1d2d3f; }
 .ctype { position: absolute; top: 4px; right: 5px; font-size: 12px; z-index: 2; }
 .card.mini .ctype { font-size: 9px; top: 2px; right: 3px; }
@@ -742,3 +743,5 @@ a.card-chip:hover { border-color: var(--toxic); }
 .note-version { background: var(--toxic); color: #0d1411; border-radius: 6px; padding: 1px 8px; font-size: 14px; }
 .note-date { font-size: 12px; font-weight: 400; }
 .new-badge { background: var(--blood); color: #fff; border-radius: 6px; padding: 1px 6px; font-size: 11px; font-weight: 800; margin-left: 4px; }
+/* Sintoma sem a condição cumprida (o adversário ainda não tem a doença de que precisa). */
+.card.unmet { filter: saturate(.3) brightness(.7); }

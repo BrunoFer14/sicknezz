@@ -1,4 +1,4 @@
-import { getCard } from '../../shared/cards';
+import { CARD_TYPES, getCard } from '../../shared/cards';
 import { CONFIG, energyMultiplier } from '../../shared/engine/config';
 import type { GameEvent, Side } from '../../shared/engine/types';
 import type { ClientMsg, EffectView, GameView, PlayerView } from '../../shared/protocol';
@@ -34,6 +34,14 @@ const HUD_HTML = `
 
 const fmt = (n: number) => String(Math.round(n * 100) / 100).replace('.', ',');
 const clockText = (t: number) => `${Math.floor(t / 60)}:${String(Math.floor(t % 60)).padStart(2, '0')}`;
+
+/** Sintomas: o que falta para os poder jogar (null se a condição estiver cumprida). */
+function unmetFor(id: string, view: GameView): string | null {
+  const card = getCard(id);
+  if (!card.requires) return null;
+  if (view.opp.effects.some((e) => e.hostile && card.requires!.includes(getCard(e.cardId).type))) return null;
+  return `${card.name}: o adversário tem de ter ${card.requires.map((t) => CARD_TYPES[t].name.toLowerCase()).join(' ou ')} ativo`;
+}
 
 /** Escurece a carta enquanto não há energia suficiente para a jogar. */
 function showCharge(cardNode: HTMLElement, energy: number, cost: number) {
@@ -298,6 +306,7 @@ export class GameScreen {
       el.classList.toggle('borrowed', borrowed[i]);
       el.classList.toggle('locked', maxCost !== null && getCard(id).cost > maxCost && !locked[i]);
       el.classList.toggle('slot-locked', locked[i]);
+      el.classList.toggle('unmet', !!unmetFor(id, view));
       showCharge(el, energy, cost);
       if (this.dragGhost?.index === i) showCharge(this.dragGhost.el, energy, cost);
     });
@@ -322,6 +331,13 @@ export class GameScreen {
     if (!v || !id || v.winner !== null) return false;
     if (v.time < 0) {
       this.toast('Espera pelo início do jogo!');
+      return false;
+    }
+    const unmet = unmetFor(id, v);
+    if (unmet) {
+      this.toast(unmet);
+      sfx.error();
+      this.shake(this.handSlots[index]);
       return false;
     }
     if (v.me.locked[index]) {

@@ -1,7 +1,7 @@
 export type PlayerIndex = 0 | 1;
 
 /** Tipos de carta. Para um tipo novo, adiciona-o aqui e em CARD_TYPES (shared/cards.ts). */
-export type CardType = 'virus' | 'bacteria' | 'fisica' | 'estado' | 'mental' | 'tratamento';
+export type CardType = 'virus' | 'bacteria' | 'fisica' | 'estado' | 'mental' | 'sintoma' | 'tratamento';
 
 /** Stats que as cartas podem modificar. Para um stat novo, adiciona-o aqui e em CONFIG.baseStats. */
 export type StatName = 'maxHp' | 'maxEnergy' | 'energyRegen' | 'virusDamageTaken' | 'bacteriaDamageTaken' | 'healingTaken';
