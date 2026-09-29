@@ -12,6 +12,12 @@ interface LobbyActions {
   /** Abre o construtor para o baralho neste espaço (vazio = baralho novo). */
   editDeck(index: number): void;
   openStats(): void;
+  openCards(): void;
+  /** Estado do login (null = login com Google não configurado no servidor). */
+  account(): { googleClientId: string | null; name: string | null };
+  /** O botão da Google devolveu um token. */
+  login(credential: string): void;
+  logout(): void;
 }
 
 export type BotLevel = 'facil' | 'normal' | 'dificil';
@@ -54,6 +60,22 @@ function saveName(name: string) {
 
 const LOGO = '<h1 class="logo">SICK<span>NEZZ</span></h1>';
 
+// Biblioteca da Google para o botão "Iniciar sessão com Google" (carregada só quando é precisa).
+type GoogleApi = any;
+let googleScript: Promise<GoogleApi | null> | null = null;
+
+function loadGoogle(): Promise<GoogleApi | null> {
+  googleScript ??= new Promise((resolve) => {
+    const s = document.createElement('script');
+    s.src = 'https://accounts.google.com/gsi/client';
+    s.async = true;
+    s.onload = () => resolve((window as unknown as { google?: GoogleApi }).google ?? null);
+    s.onerror = () => resolve(null);
+    document.head.append(s);
+  });
+  return googleScript;
+}
+
 export class LobbyScreen {
   private root = document.createElement('div');
 
@@ -70,6 +92,7 @@ export class LobbyScreen {
     this.root.innerHTML = `
       ${LOGO}
       <p class="tagline">Infeta o teu adversário antes que ele te infete a ti.</p>
+      <div class="account-bar"></div>
       <div class="panel">
         <label>O teu nome
           <input id="name" maxlength="16" placeholder="Jogador" value="${escapeHtml(loadName())}" />
@@ -92,7 +115,11 @@ export class LobbyScreen {
         <p class="error">${escapeHtml(error)}</p>
       </div>
       <div class="panel deck-summary"></div>
-      <button id="stats" class="btn stats-btn">🏆 Estatísticas e ranking</button>`;
+      <div class="row">
+        <button id="stats" class="btn stats-btn">🏆 Estatísticas e ranking</button>
+        <button id="cards" class="btn stats-btn">📖 Cartas</button>
+      </div>
+      <p class="lobby-footer"><a href="/privacidade.html">Política de Privacidade</a></p>`;
     const name = () => {
       const n = this.root.querySelector<HTMLInputElement>('#name')!.value.trim();
       saveName(n);
@@ -109,8 +136,32 @@ export class LobbyScreen {
     this.root.querySelector('#join')!.addEventListener('click', join);
     codeInput.addEventListener('keydown', (e) => e.key === 'Enter' && join());
     this.root.querySelector('#stats')!.addEventListener('click', () => this.actions.openStats());
+    this.root.querySelector('#cards')!.addEventListener('click', () => this.actions.openCards());
     this.renderDecks();
+    this.renderAccount();
     this.show();
+  }
+
+  /** Login com Google (botão oficial) ou o nome da conta ligada. */
+  private renderAccount() {
+    const bar = this.root.querySelector<HTMLElement>('.account-bar')!;
+    const { googleClientId, name } = this.actions.account();
+    if (name) {
+      bar.innerHTML = `<span>👤 Sessão iniciada como <b>${escapeHtml(name)}</b></span> <button class="link-btn" id="logout">Sair</button>`;
+      bar.querySelector('#logout')!.addEventListener('click', () => this.actions.logout());
+      return;
+    }
+    if (!googleClientId) {
+      bar.innerHTML = '';
+      return;
+    }
+    bar.innerHTML = '<div class="google-btn"></div><span class="muted">Guarda o ranking e os baralhos em qualquer dispositivo.</span>';
+    loadGoogle().then((g) => {
+      const el = bar.querySelector<HTMLElement>('.google-btn');
+      if (!g || !el) return;
+      g.accounts.id.initialize({ client_id: googleClientId, callback: (r: { credential: string }) => this.actions.login(r.credential) });
+      g.accounts.id.renderButton(el, { theme: 'filled_black', size: 'large', text: 'signin_with', shape: 'pill', locale: 'pt-PT' });
+    });
   }
 
   /** Painel dos baralhos: espaços 1–10 (clicar escolhe; vazio cria um novo) e o baralho ativo. */

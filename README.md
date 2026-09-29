@@ -161,7 +161,22 @@ No plano gratuito, o servidor adormece após 15 minutos sem jogadores. O primeir
 
 ### Guardar as estatísticas e o ranking
 
-Não há contas: cada browser recebe uma identidade anónima, guardada no próprio browser. Se o jogador limpar os dados do browser, começa um perfil novo.
+Sem login, cada browser recebe uma identidade anónima, guardada no próprio browser. Se o jogador limpar os dados do browser, começa um perfil novo. Com **login Google** (ver abaixo), o perfil e os baralhos ficam na conta e aparecem em qualquer dispositivo; na primeira vez, o perfil anónimo atual fica ligado à conta.
 
 - Sem configuração, os dados ficam em `data/db.json`. **No Render gratuito este ficheiro perde-se sempre que o servidor reinicia.**
 - Para guardar para sempre, cria uma base de dados PostgreSQL gratuita em https://neon.tech e copia a "connection string" (`postgresql://...`). No Render, vai ao serviço e escolhe **Environment → Add Environment Variable**. O nome é `DATABASE_URL` e o valor é essa connection string. As tabelas são criadas automaticamente.
+
+### Login com Google
+
+O botão "Iniciar sessão com Google" só aparece se a variável `GOOGLE_CLIENT_ID` estiver definida.
+
+1. Vai a https://console.cloud.google.com, cria um projeto e, em **APIs e serviços → Ecrã de consentimento OAuth**, configura-o como "Externo" (nome da app: Sicknezz).
+2. Em **APIs e serviços → Credenciais → Criar credenciais → ID de cliente OAuth**, escolhe "Aplicação Web".
+3. Em **Origens JavaScript autorizadas**, põe o endereço do jogo (ex.: `https://sicknezz.onrender.com`) e `http://localhost:5173` para testes.
+4. Copia o **ID de cliente** (`....apps.googleusercontent.com`) e, no Render, adiciona a variável `GOOGLE_CLIENT_ID` com esse valor.
+
+O ID de cliente não é secreto. Guarda-se só o identificador da conta Google e o nome (não o email). Convém ter o `DATABASE_URL` configurado, senão as contas perdem-se quando o servidor reinicia.
+
+## Páginas das cartas
+
+Cada carta tem uma página em `/cartas/<id>` (lista em `/cartas`): o que faz, o que a cura/bloqueia, sinergias, estatísticas, o que é na vida real e um pouco de história. Os textos estão em [shared/lore.ts](shared/lore.ts) e as artes alternativas em [shared/arts.ts](shared/arts.ts) (hoje todas usam o emoji).

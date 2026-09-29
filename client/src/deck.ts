@@ -53,12 +53,33 @@ function loadStore(): DeckStore {
   return store;
 }
 
-function saveStore(store: DeckStore) {
+/** Chamado sempre que os baralhos mudam (para os guardar na conta, com login). */
+let onChange: ((store: DeckStore) => void) | null = null;
+
+export function onDecksChange(fn: (store: DeckStore) => void) {
+  onChange = fn;
+}
+
+function saveStore(store: DeckStore, notify = true) {
   try {
     localStorage.setItem(DECKS_KEY, JSON.stringify(store));
   } catch {
     /* ignorar */
   }
+  if (notify) onChange?.(store);
+}
+
+/** Todos os baralhos (para enviar para a conta). */
+export function exportDecks(): DeckStore {
+  return loadStore();
+}
+
+/** Substitui os baralhos deste browser pelos da conta. */
+export function importDecks(data: { active: number; decks: (SavedDeck | null)[] }) {
+  const store: DeckStore = { active: 0, decks: new Array(MAX_DECKS).fill(null) };
+  store.decks = store.decks.map((_, i) => readSavedDeck(data.decks[i]));
+  store.active = Number.isInteger(data.active) && store.decks[data.active] ? data.active : Math.max(0, store.decks.findIndex(Boolean));
+  saveStore(store, false);
 }
 
 /** Todos os espaços (null = vazio). */

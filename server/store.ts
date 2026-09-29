@@ -6,7 +6,9 @@ import { fileURLToPath } from 'node:url';
 import { CARD_IDS } from '../shared/cards';
 import type { PlayerIndex } from '../shared/engine/types';
 import type { ReplayData } from '../shared/engine/replay';
-import type { MatchRecord, StatsPayload } from '../shared/protocol';
+import { randomBytes } from 'node:crypto';
+import { validateDeck } from '../shared/cards';
+import type { AccountInfo, DecksData, MatchRecord, StatsPayload } from '../shared/protocol';
 
 /** Entrada do histórico tal como fica guardada (com o replay, que só é enviado quando pedido). */
 type StoredMatch = MatchRecord & { replay?: ReplayData };
@@ -24,6 +26,29 @@ export interface Profile {
   cardPlays: Record<string, number>;
   /** Últimas partidas (mais recente primeiro). Perfis antigos não têm. */
   history?: StoredMatch[];
+  /** Conta Google ligada (o "sub" do token da Google). */
+  googleSub?: string;
+  /** Segredos (hash) dos dispositivos onde se fez login com a conta. */
+  tokens?: string[];
+  /** Baralhos guardados na conta. */
+  decks?: DecksData;
+}
+
+/** Quantos dispositivos podem ficar com sessão iniciada ao mesmo tempo. */
+const MAX_TOKENS = 10;
+const MAX_DECKS = 10;
+
+/** Valida baralhos vindos do cliente (só entram baralhos válidos, até 10 espaços). */
+export function cleanDecks(d: unknown): DecksData | null {
+  const data = d as DecksData | null;
+  if (!data || !Array.isArray(data.decks) || data.decks.length > MAX_DECKS) return null;
+  const decks = data.decks.map((x) =>
+    x && typeof x.name === 'string' && validateDeck(x.cards) === null ? { name: x.name.trim().slice(0, 24) || 'Baralho', cards: [...x.cards] } : null,
+  );
+  while (decks.length < MAX_DECKS) decks.push(null);
+  if (!decks.some(Boolean)) return null;
+  const active = Number.isInteger(data.active) && decks[data.active] ? data.active : decks.findIndex(Boolean);
+  return { active, decks };
 }
 
 export interface CardStat {
@@ -147,7 +172,7 @@ export class Store {
     if (!/^[a-f0-9]{16,64}$/.test(id) || secret.length < 16 || secret.length > 128) return null;
     const hash = sha(secret);
     const existing = this.profiles.get(id);
-    if (existing) return existing.secretHash === hash ? existing : null;
+    if (existing) return existing.secretHash === hash || existing.tokens?.includes(hash) ? existing : null;
     const p: Profile = { id, secretHash: hash, name: 'Jogador', rating: START_RATING, games: 0, rankedGames: 0, wins: 0, losses: 0, draws: 0, cardPlays: {} };
     this.profiles.set(id, p); // só é gravado depois da primeira partida
     return p;
@@ -156,7 +181,49 @@ export class Store {
   setName(p: Profile, name: string) {
     if (p.name === name) return;
     p.name = name;
-    if (p.games > 0) this.backend.saveProfile(p).catch(logError);
+    if (p.games > 0 || p.googleSub) this.backend.saveProfile(p).catch(logError);
+  }
+
+  account(p: Profile | null): AccountInfo | null {
+    return p?.googleSub ? { name: p.name, decks: p.decks ?? null } : null;
+  }
+
+  /**
+   * Login com Google. Se a conta já existir, entra nesse perfil; se não, liga-a ao perfil atual
+   * (mantém o ranking e o histórico). Devolve o perfil e um segredo novo para este dispositivo.
+   */
+  loginGoogle(current: Profile | null, sub: string, googleName: string): { profile: Profile; secret: string } {
+    let profile = [...this.profiles.values()].find((p) => p.googleSub === sub);
+    if (!profile) {
+      if (current && !current.googleSub) profile = current;
+      else {
+        const id = randomBytes(16).toString('hex');
+        profile = { id, secretHash: sha(randomBytes(24).toString('hex')), name: 'Jogador', rating: START_RATING, games: 0, rankedGames: 0, wins: 0, losses: 0, draws: 0, cardPlays: {} };
+        this.profiles.set(id, profile);
+      }
+      profile.googleSub = sub;
+      if (profile.name === 'Jogador' && googleName) profile.name = googleName.slice(0, 16);
+    }
+    const secret = randomBytes(24).toString('hex');
+    profile.tokens = [sha(secret), ...(profile.tokens ?? [])].slice(0, MAX_TOKENS);
+    this.backend.saveProfile(profile).catch(logError);
+    return { profile, secret };
+  }
+
+  /** Termina a sessão neste dispositivo (o segredo deixa de funcionar). */
+  logout(p: Profile, secret: string) {
+    const hash = sha(secret);
+    if (!p.tokens?.includes(hash)) return;
+    p.tokens = p.tokens.filter((t) => t !== hash);
+    this.backend.saveProfile(p).catch(logError);
+  }
+
+  saveDecks(p: Profile, decks: unknown) {
+    if (!p.googleSub) return;
+    const clean = cleanDecks(decks);
+    if (!clean) return;
+    p.decks = clean;
+    this.backend.saveProfile(p).catch(logError);
   }
 
   /** Regista o fim de uma partida. Devolve os pontos ganhos/perdidos por cada jogador (só em ranked). */

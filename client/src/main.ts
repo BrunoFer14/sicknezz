@@ -1,9 +1,10 @@
 import './style.css';
-import type { ServerMsg } from '../../shared/protocol';
-import { activeDeckError, listDecks, loadDeck, saveDeck, setActiveDeck } from './deck';
+import type { AccountInfo, ServerMsg } from '../../shared/protocol';
+import { activeDeckError, exportDecks, importDecks, listDecks, loadDeck, onDecksChange, saveDeck, setActiveDeck } from './deck';
+import { CardsScreen } from './cardpage';
 import { DeckBuilder } from './deckbuilder';
 import { GameScreen } from './game';
-import { identity } from './identity';
+import { identity, resetIdentity, setIdentity } from './identity';
 import { LobbyScreen } from './lobby';
 import { connect } from './net';
 import { ReplayScreen } from './replay';
@@ -11,12 +12,30 @@ import { installPreview } from './preview';
 import { sfx } from './sound';
 import { StatsScreen } from './stats';
 
-type Screen = 'menu' | 'waiting' | 'queue' | 'game' | 'builder' | 'stats' | 'replay';
+type Screen = 'menu' | 'waiting' | 'queue' | 'game' | 'builder' | 'stats' | 'replay' | 'cards';
 
 const app = document.getElementById('app')!;
 let screen: Screen = 'menu';
 let game: GameScreen | null = null;
 let stats: StatsScreen | null = null;
+let cards: CardsScreen | null = null;
+/** Login com Google: se o servidor o tiver configurado e se há sessão iniciada. */
+let googleClientId: string | null = null;
+let accountName: string | null = null;
+
+// Com sessão iniciada, os baralhos ficam guardados na conta.
+onDecksChange((decks) => {
+  if (accountName) net.send({ t: 'saveDecks', decks });
+});
+
+/** Recebeu a conta do servidor: usa os baralhos dela (ou envia os deste browser, se a conta ainda não tiver). */
+function applyAccount(account: AccountInfo | null) {
+  accountName = account?.name ?? null;
+  if (!account) return;
+  if (account.decks) importDecks(account.decks);
+  else net.send({ t: 'saveDecks', decks: exportDecks() });
+}
+
 /** Onde voltar quando o replay fechar. */
 let replayFrom: 'menu' | 'stats' = 'menu';
 
@@ -92,13 +111,53 @@ const lobby = new LobbyScreen(app, {
     });
   },
   openStats,
+  openCards: () => navigate('/cartas'),
+  account: () => ({ googleClientId, name: accountName }),
+  login: (credential) => net.send({ t: 'login', credential }),
+  logout: () => {
+    net.send({ t: 'logout' });
+    resetIdentity();
+    location.reload(); // volta a ligar com um perfil anónimo novo
+  },
 });
 
 installPreview();
 
+// ---------- Páginas das cartas (/cartas e /cartas/<id>) ----------
+
+/** Muda de endereço sem recarregar a página. */
+function navigate(path: string) {
+  if (location.pathname !== path) history.pushState(null, '', path);
+  route();
+}
+
+/** Mostra o ecrã certo para o endereço atual. Durante uma partida ou replay não sai deles. */
+function route() {
+  if (screen === 'game' || screen === 'replay') return;
+  const m = location.pathname.match(/^\/cartas(?:\/([\w-]+))?\/?$/);
+  cards?.destroy();
+  cards = null;
+  if (!m) {
+    if (screen === 'cards') toMenu();
+    return;
+  }
+  lobby.hide();
+  stats?.destroy();
+  stats = null;
+  screen = 'cards';
+  cards = new CardsScreen(app, m[1] ?? null, navigate);
+  if (m[1]) net.send({ t: 'stats' });
+}
+
+window.addEventListener('popstate', route);
+route();
+
 function toMenu(message = '') {
   game?.destroy();
   game = null;
+  cards?.destroy();
+  cards = null;
+  if (location.pathname !== '/') history.pushState(null, '', '/' + location.search);
   screen = 'menu';
   lobby.showMenu(message);
 }
@@ -110,7 +169,15 @@ function exitGame() {
 
 function onMessage(msg: ServerMsg) {
   switch (msg.t) {
+    case 'account':
+      setIdentity(msg.profileId, msg.secret);
+      applyAccount(msg.account);
+      if (screen === 'menu') lobby.showMenu();
+      break;
     case 'welcome':
+      googleClientId = msg.googleClientId;
+      applyAccount(msg.account);
+      if (screen === 'menu') lobby.showMenu();
       // A ligação voltou mas a partida/sala já não existe.
       if (!msg.resumed && screen === 'game') toMenu('A partida terminou enquanto estavas sem ligação.');
       else if (!msg.resumed && (screen === 'waiting' || screen === 'queue')) toMenu('A ligação caiu. Tenta outra vez.');
@@ -128,6 +195,8 @@ function onMessage(msg: ServerMsg) {
     case 'state':
       if (screen === 'replay') break;
       if (!game) {
+        cards?.destroy();
+        cards = null;
         if (screen === 'queue' || screen === 'waiting') sfx.found();
         lobby.hide();
         game = new GameScreen(app, net.send, exitGame, { onReplay: () => requestReplay() });
@@ -137,6 +206,7 @@ function onMessage(msg: ServerMsg) {
       break;
     case 'stats':
       stats?.show(msg.stats);
+      cards?.showStats(msg.stats);
       break;
     case 'replay':
       showReplay(msg);

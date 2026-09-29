@@ -3,6 +3,7 @@ import { CONFIG } from '../../shared/engine/config';
 import type { CardType } from '../../shared/engine/types';
 import { cardEl, escapeHtml } from './card';
 import type { SavedDeck } from './deck';
+import { cardRoles, ROLES, type Role } from './roles';
 
 const TYPE_ORDER = Object.keys(CARD_TYPES) as CardType[];
 
@@ -12,60 +13,6 @@ const sortCards = (ids: readonly string[]) =>
     const ca = getCard(a), cb = getCard(b);
     return TYPE_ORDER.indexOf(ca.type) - TYPE_ORDER.indexOf(cb.type) || ca.cost - cb.cost;
   });
-
-/** Para que serve uma carta; calculado a partir das mecânicas, por isso cartas novas entram sozinhas nos filtros. */
-type Role = 'dano' | 'cura' | 'imunidade' | 'energia' | 'controlo' | 'permanente';
-
-const ROLES: [Role, string][] = [
-  ['dano', '⚔️ Dano'],
-  ['cura', '❤️ Cura'],
-  ['imunidade', '🛡️ Imunidade'],
-  ['energia', '⚡ Energia'],
-  ['controlo', '🎛️ Controlo'],
-  ['permanente', '♾️ Permanente'],
-];
-
-function cardRoles(id: string): Set<Role> {
-  const card = getCard(id);
-  const roles = new Set<Role>();
-  if (card.permanent) roles.add('permanente');
-  for (const e of card.effects) {
-    switch (e.mechanic) {
-      case 'damage':
-      case 'damagePerDisease':
-      case 'damageOverTime':
-      case 'infection':
-        roles.add('dano');
-        break;
-      case 'heal':
-      case 'healOverTime':
-      case 'cleanse':
-        roles.add('cura');
-        break;
-      case 'immunity':
-        roles.add('imunidade');
-        break;
-      case 'drainEnergy':
-      case 'drainEnergyOverTime':
-      case 'drainEnergyAbove':
-      case 'gainEnergyOverTime':
-        roles.add('energia');
-        break;
-      case 'statModifier':
-        // Energia máxima/regeneração conta como energia; vida máxima e multiplicadores de dano contam como dano.
-        roles.add(e.params.stat === 'energyRegen' || e.params.stat === 'maxEnergy' ? 'energia' : 'dano');
-        break;
-      case 'forbidTypes':
-        roles.add('imunidade');
-        roles.add('controlo');
-        break;
-      default:
-        // Custos, bloqueios, mão, Paranoia...
-        roles.add('controlo');
-    }
-  }
-  return roles;
-}
 
 type CostRange = 'low' | 'mid' | 'high';
 
@@ -103,7 +50,7 @@ export class DeckBuilder {
         </div>
         <button class="btn primary" id="save">Guardar</button>
       </header>
-      <p class="muted">Clica numa carta para a juntar ou tirar do baralho. Tens de escolher ${CONFIG.deckSize}.</p>
+      <p class="muted">Clica numa carta para a juntar ou tirar do baralho. Tens de escolher ${CONFIG.deckSize}. <a href="/cartas" target="_blank" rel="noopener">📖 Saber mais sobre cada carta</a></p>
       <div class="deck-slots"></div>
       <div class="filter-box">
         <input class="card-search" type="search" placeholder="🔎 Procurar carta..." />

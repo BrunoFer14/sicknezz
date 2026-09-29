@@ -5,6 +5,19 @@ import { cardCost, forbiddenTypes, lockedSlots, maxPlayableCost } from './engine
 import type { ReplayData } from './engine/replay';
 import type { GameEvent, GameState, PlayerIndex, PlayerState, Side, Stats } from './engine/types';
 
+/** Baralhos guardados de um jogador (os 10 espaços e qual está ativo). */
+export interface DecksData {
+  active: number;
+  decks: ({ name: string; cards: string[] } | null)[];
+}
+
+/** Conta Google ligada ao perfil. */
+export interface AccountInfo {
+  name: string;
+  /** Baralhos guardados na conta (null se ainda não tiver). */
+  decks: DecksData | null;
+}
+
 export type ClientMsg =
   /** Primeira mensagem de cada ligação. `session` identifica o separador (reconexão), `profileId`/`secret` o jogador (estatísticas). */
   | { t: 'hello'; session: string; profileId: string; secret: string }
@@ -17,6 +30,11 @@ export type ClientMsg =
   /** `side`: área onde a carta foi largada (só conta para cartas que se jogam em qualquer lado). */
   | { t: 'play'; handIndex: number; side?: Side }
   | { t: 'surrender' }
+  /** Login com Google: `credential` é o token que o botão da Google devolve. */
+  | { t: 'login'; credential: string }
+  | { t: 'logout' }
+  /** Guarda os baralhos na conta (só com login). */
+  | { t: 'saveDecks'; decks: DecksData }
   /** Pede um replay: `at` = partida do histórico; sem `at`, a última partida (da sala atual ou do histórico). */
   | { t: 'getReplay'; at?: number }
   | { t: 'rematch' }
@@ -25,7 +43,10 @@ export type ClientMsg =
 
 export type ServerMsg =
   /** `resumed`: voltaste a entrar numa partida que estava a decorrer. */
-  | { t: 'welcome'; resumed: boolean }
+  /** `googleClientId`: null se o login com Google não estiver configurado no servidor. */
+  | { t: 'welcome'; resumed: boolean; googleClientId: string | null; account: AccountInfo | null }
+  /** Login feito: o cliente passa a identificar-se com este perfil/segredo neste dispositivo. */
+  | { t: 'account'; profileId: string; secret: string; account: AccountInfo }
   | { t: 'lobby'; code: string; you: PlayerIndex; players: (string | null)[] }
   | { t: 'queued' }
   | { t: 'state'; view: GameView }

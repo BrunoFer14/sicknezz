@@ -8,6 +8,7 @@ import type { PlayerIndex } from '../shared/engine/types';
 import type { ClientMsg } from '../shared/protocol';
 import { BOT_LEVELS, type BotLevel } from './bot';
 import { Room, send } from './room';
+import { OAuth2Client } from 'google-auth-library';
 import { Store, type GameMode, type Profile } from './store';
 
 const PORT = Number(process.env.PORT) || 3001;
@@ -22,6 +23,23 @@ const MIME: Record<string, string> = {
 };
 
 const store = await Store.open();
+
+/** Login com Google: só fica ativo se GOOGLE_CLIENT_ID estiver definido (ver README). */
+const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID || null;
+const google = GOOGLE_CLIENT_ID ? new OAuth2Client(GOOGLE_CLIENT_ID) : null;
+console.log(GOOGLE_CLIENT_ID ? 'Login com Google ativo' : 'Login com Google desligado (sem GOOGLE_CLIENT_ID)');
+
+/** Confirma que o token veio mesmo da Google e é para este jogo. */
+async function verifyGoogle(credential: unknown): Promise<{ sub: string; name: string } | null> {
+  if (!google || typeof credential !== 'string' || credential.length > 4096) return null;
+  try {
+    const ticket = await google.verifyIdToken({ idToken: credential, audience: GOOGLE_CLIENT_ID! });
+    const p = ticket.getPayload();
+    return p?.sub ? { sub: p.sub, name: p.given_name ?? p.name ?? '' } : null;
+  } catch {
+    return null;
+  }
+}
 
 // Em produção (depois de `npm run build`) o servidor também serve o cliente.
 const http = createServer((req, res) => {
@@ -40,6 +58,8 @@ const http = createServer((req, res) => {
 interface Conn {
   ws: WebSocket;
   session: string | null;
+  /** Segredo com que se identificou (para terminar a sessão). */
+  secret: string | null;
   profile: Profile | null;
   room: Room | null;
   index: PlayerIndex;
@@ -96,6 +116,10 @@ function leaveAll(conn: Conn) {
   conn.room = null;
 }
 
+function welcome(conn: Conn, resumed: boolean) {
+  send(conn.ws, { t: 'welcome', resumed, googleClientId: GOOGLE_CLIENT_ID, account: store.account(conn.profile) });
+}
+
 /** Tenta voltar a pôr o jogador na partida onde estava. */
 function resume(conn: Conn): boolean {
   for (const room of rooms.values()) {
@@ -103,7 +127,7 @@ function resume(conn: Conn): boolean {
     if (i === null) continue;
     conn.room = room;
     conn.index = i;
-    send(conn.ws, { t: 'welcome', resumed: true });
+    welcome(conn, true);
     room.reconnect(i, conn.ws);
     return true;
   }
@@ -113,7 +137,7 @@ function resume(conn: Conn): boolean {
 const wss = new WebSocketServer({ server: http, path: '/ws' });
 
 wss.on('connection', (ws) => {
-  const conn: Conn = { ws, session: null, profile: null, room: null, index: 0 };
+  const conn: Conn = { ws, session: null, secret: null, profile: null, room: null, index: 0 };
 
   ws.on('message', (raw) => {
     let msg: ClientMsg;
@@ -127,7 +151,8 @@ wss.on('connection', (ws) => {
       if (typeof msg.session !== 'string' || !/^[a-f0-9]{16,64}$/.test(msg.session)) return;
       conn.session = msg.session;
       conn.profile = store.auth(msg.profileId, msg.secret);
-      if (!resume(conn)) send(ws, { t: 'welcome', resumed: false });
+      conn.secret = typeof msg.secret === 'string' ? msg.secret : null;
+      if (!resume(conn)) welcome(conn, false);
       return;
     }
     if (!conn.session) return; // o cliente tem de dizer "hello" primeiro
@@ -176,6 +201,23 @@ wss.on('connection', (ws) => {
         enter(conn, room, cleanName(msg.name), msg.deck);
         break;
       }
+      case 'login': {
+        verifyGoogle(msg.credential).then((g) => {
+          if (!g) return send(ws, { t: 'error', message: 'Não foi possível entrar com a Google. Tenta outra vez.' });
+          const { profile, secret } = store.loginGoogle(conn.profile, g.sub, g.name);
+          conn.profile = profile;
+          conn.secret = secret;
+          send(ws, { t: 'account', profileId: profile.id, secret, account: store.account(profile)! });
+        });
+        break;
+      }
+      case 'logout':
+        if (conn.profile && conn.secret) store.logout(conn.profile, conn.secret);
+        conn.profile = null;
+        break;
+      case 'saveDecks':
+        if (conn.profile) store.saveDecks(conn.profile, msg.decks);
+        break;
       case 'getReplay': {
         const room = conn.room?.lastReplay && msg.at === undefined ? conn.room : null;
         const found = room ? { replay: room.lastReplay!, you: conn.index } : conn.profile ? store.getReplay(conn.profile, msg.at) : null;
