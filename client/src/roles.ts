@@ -37,6 +37,7 @@ export function cardRoles(id: string): Set<Role> {
       case 'drainEnergyOverTime':
       case 'drainEnergyAbove':
       case 'gainEnergyOverTime':
+      case 'energyBurst':
         roles.add('energia');
         break;
       case 'statModifier': {

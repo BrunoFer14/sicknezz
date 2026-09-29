@@ -13,6 +13,8 @@ export interface MechanicContext {
   target: PlayerIndex;
   /** Jogador que jogou a carta. */
   source: PlayerIndex;
+  /** Carta que criou o efeito. */
+  cardId: string;
   /** Tipo da carta que criou o efeito. */
   cardType: CardType;
   /** Joga os efeitos de outra carta de `source` em `target`, como se fosse jogada agora (ver Espirro). */
@@ -221,6 +223,15 @@ export const MECHANICS = {
   lockSlots: defineMechanic<{ slots: number[]; duration: number }>({
     duration: (p) => p.duration,
     lockedSlots: (p) => p.slots,
+  }),
+
+  /** Energia imediata. A partir da 2.ª vez nesta partida, tira vida a quem joga: `penalty`, e duplica a cada vez (2, 4, 8…). */
+  energyBurst: defineMechanic<{ amount: number; penalty: number }>({
+    onApply: ({ state, source, cardId }, p) => {
+      gainEnergy(state, source, p.amount);
+      const times = state.players[source].played[cardId] ?? 1;
+      if (times > 1) damage(state, source, p.penalty * 2 ** (times - 2));
+    },
   }),
 
   /** Dá energia ao longo do tempo. */

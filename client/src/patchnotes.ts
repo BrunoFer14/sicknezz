@@ -16,6 +16,19 @@ const change = (name: string, before: string, after: string): NoteItem => ({ nam
 
 export const PATCH_NOTES: PatchNote[] = [
   {
+    version: '0.10',
+    date: '29/09/2026',
+    title: 'Bebida Energética',
+    sections: [
+      {
+        title: '🃏 Cartas novas',
+        items: [
+          '🥤 Bebida Energética (Tratamento, 1): ganhas 3 de energia de imediato. A partir da 2.ª bebida na mesma partida, cada uma tira-te o dobro da vida da anterior — 2, 4, 8, 16… Energia rápida, mas beber demais faz mal.',
+        ],
+      },
+    ],
+  },
+  {
     version: '0.9',
     date: '29/09/2026',
     title: 'Respostas',

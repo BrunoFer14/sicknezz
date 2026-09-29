@@ -445,6 +445,15 @@ export const CARDS = defineCards({
     target: 'self',
     effects: [{ mechanic: 'healOverTime', params: { amount: 6, duration: 8 } }],
   },
+  bebida: {
+    name: 'Bebida Energética',
+    emoji: '🥤',
+    type: 'tratamento',
+    cost: 1,
+    description: 'Ganhas 3 de energia já. A partir da 2.ª bebida nesta partida, cada uma tira-te o dobro da vida da anterior: 2, 4, 8, 16…',
+    target: 'self',
+    effects: [{ mechanic: 'energyBurst', params: { amount: 3, penalty: 2 } }],
+  },
   cafe: {
     name: 'Café',
     emoji: '☕',

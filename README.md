@@ -117,6 +117,7 @@ O TypeScript valida os `params` de cada mecânica, e o editor dá autocomplete. 
 | Mecânica            | Params                                            | Exemplo               |
 |---------------------|---------------------------------------------------|-----------------------|
 | `damage`            | `amount`                                          | Salmonela             |
+| `energyBurst`       | `amount`, `penalty`                              | Bebida Energética     |
 | `finisher`          | `amount`, `low`, `below`                          | Enfarte               |
 | `damagePerDisease`  | `base`, `per`, `type?`                            | Pneumonia, Sépsis     |
 | `heal`              | `amount`                                          | Hospital              |

@@ -56,6 +56,8 @@ export interface PlayerState {
   effects: ActiveEffect[];
   /** Fração de dano por aplicar (quando há multiplicadores como o do Antiviral). */
   damageCarry: number;
+  /** Quantas vezes o jogador já jogou cada carta nesta partida (ex.: Bebida Energética). */
+  played: Record<string, number>;
 }
 
 /** Eventos para a interface animar (dano a flutuar, carta jogada, ...). */

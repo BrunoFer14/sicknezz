@@ -19,6 +19,7 @@ function createPlayer(rng: { rng: number }, name: string, deck: readonly string[
     deck: cards,
     effects: [],
     damageCarry: 0,
+    played: {},
   };
 }
 
@@ -122,6 +123,7 @@ export function playCard(state: GameState, player: PlayerIndex, handIndex: numbe
   if (!p.borrowed[handIndex]) p.deck.push(cardId);
   p.hand[handIndex] = p.deck.shift()!;
   p.borrowed[handIndex] = false;
+  p.played[cardId] = (p.played[cardId] ?? 0) + 1;
 
   // Efeitos no próprio jogador que reagem às cartas que ele joga (ex.: a Alergia desaparece com um tratamento).
   for (const e of [...p.effects]) getMechanic(e.mechanic).onOwnerPlay?.(e.params, e, card.type);
@@ -183,7 +185,7 @@ function isImmune(p: PlayerState, type: CardType): boolean {
 
 function applyEffect(state: GameState, source: PlayerIndex, target: PlayerIndex, cardId: string, card: CardDef, spec: EffectSpec, playId: number) {
   const mech = getMechanic(spec.mechanic);
-  const ctx: MechanicContext = { state, target, source, cardType: card.type, cast: (id) => castCard(state, source, target, id) };
+  const ctx: MechanicContext = { state, target, source, cardId, cardType: card.type, cast: (id) => castCard(state, source, target, id) };
 
   if (!mech.duration) {
     mech.onApply?.(ctx, spec.params, null);
@@ -221,7 +223,7 @@ export function tick(state: GameState, dt: number) {
     for (const e of [...p.effects]) {
       if (!p.effects.includes(e)) continue; // removido por outro efeito neste tick
       const mech = getMechanic(e.mechanic);
-      const ctx: MechanicContext = { state, target, source: e.source, cardType: e.cardType, cast: (id) => castCard(state, e.source, target, id) };
+      const ctx: MechanicContext = { state, target, source: e.source, cardId: e.cardId, cardType: e.cardType, cast: (id) => castCard(state, e.source, target, id) };
       e.elapsed += dt;
       mech.onTick?.(ctx, e.params, e, dt);
       if (e.ended || (e.duration !== null && e.elapsed >= e.duration)) {

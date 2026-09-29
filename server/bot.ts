@@ -161,6 +161,12 @@ export class Bot {
         case 'drainEnergyAbove':
           value += Math.max(0, opp.energy - e.params.keep) * 3;
           break;
+        case 'energyBurst': {
+          // Bebida Energética: vale a energia, menos a vida que vai custar (cada vez mais).
+          const times = Object.entries(me.played).find(([id]) => getCard(id).name === card.name)?.[1] ?? 0;
+          value += (me.energy < 6 ? e.params.amount * 2.5 : 1) - (times ? e.params.penalty * 2 ** (times - 1) : 0) * 1.5;
+          break;
+        }
         case 'gainEnergyOverTime':
           value += me.energy < 6 ? e.params.amount * 2.5 : 1;
           break;

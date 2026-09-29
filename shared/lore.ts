@@ -163,6 +163,10 @@ export const LORE: Partial<Record<CardId, CardLore>> = {
     what: 'Tratamento com exercícios, movimento e técnicas manuais para recuperar de lesões, fraturas ou de um AVC, e para melhorar problemas como a falta de atividade física ou a obesidade.',
     history: 'Em 1813, o sueco Pehr Henrik Ling fundou em Estocolmo um instituto de ginástica médica, considerado um dos pontos de partida da fisioterapia moderna.',
   },
+  bebida: {
+    what: 'Bebidas com muita cafeína e açúcar, que dão um pico rápido de energia. Uma de vez em quando não faz mal a um adulto, mas beber muitas pode causar palpitações, ansiedade e insónias — por isso, no jogo, cada bebida a mais custa-te vida.',
+    history: 'A Red Bull foi lançada na Áustria em 1987, inspirada numa bebida tailandesa chamada Krating Daeng. A Autoridade Europeia para a Segurança dos Alimentos considera que até 400 mg de cafeína por dia são seguros para um adulto — cerca de cinco latas.',
+  },
   cafe: {
     what: 'O café contém cafeína, um estimulante que bloqueia no cérebro os sinais de cansaço (a adenosina). Dá energia durante umas horas — no jogo, literalmente.',
     history: 'Conta a lenda que um pastor etíope chamado Kaldi descobriu o café ao ver as suas cabras muito agitadas depois de comerem os frutos de um arbusto.',
