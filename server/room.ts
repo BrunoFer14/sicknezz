@@ -124,6 +124,15 @@ export class Room {
     this.broadcast();
   }
 
+  /** O jogador desiste: perde a partida (conta para o ranking como uma derrota normal). */
+  surrender(i: PlayerIndex) {
+    if (!this.game || this.game.winner !== null) return;
+    this.game.winner = other(i);
+    this.game.events.push({ type: 'surrender', player: i });
+    this.checkGameOver();
+    this.broadcast();
+  }
+
   requestRematch(i: PlayerIndex) {
     if (!this.game || this.game.winner === null || !this.seats[other(i)]?.ws) return;
     this.rematch[i] = true;

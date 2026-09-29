@@ -12,6 +12,7 @@ export type ClientMsg =
   | { t: 'queue'; name: string; deck: string[] }
   /** `side`: área onde a carta foi largada (só conta para cartas que se jogam em qualquer lado). */
   | { t: 'play'; handIndex: number; side?: Side }
+  | { t: 'surrender' }
   | { t: 'rematch' }
   | { t: 'leave' }
   | { t: 'stats' };

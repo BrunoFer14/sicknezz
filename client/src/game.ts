@@ -1,4 +1,5 @@
 import { getCard } from '../../shared/cards';
+import { CONFIG, energyMultiplier } from '../../shared/engine/config';
 import type { GameEvent, Side } from '../../shared/engine/types';
 import type { ClientMsg, EffectView, GameView, PlayerView } from '../../shared/protocol';
 import { cardEl, escapeHtml } from './card';
@@ -58,6 +59,10 @@ export class GameScreen {
   private toastTimer = 0;
   private logList: HTMLElement;
   private lastWinner: GameView['winner'] = null;
+  /** Quem desistiu nesta partida (para a mensagem final). */
+  private surrendered: number | null = null;
+  /** Fase de energia atual (para avisar quando acelera). */
+  private lastEnergyMult = 0;
   private lastCount = 0;
   private banner: HTMLElement;
   /** Cópia da carta que está a ser arrastada (tem de acompanhar a energia também). */
@@ -84,6 +89,7 @@ export class GameScreen {
         <span class="clock">0:00</span>
         <button class="icon-btn mute" title="Som"></button>
         <button class="icon-btn log-toggle" title="Histórico">📜</button>
+        <button class="icon-btn surrender" title="Desistir">🏳️</button>
       </div>
       <section class="board my-board">
         <div class="zone-label">A tua área</div>
@@ -132,6 +138,11 @@ export class GameScreen {
     this.overlay = q('.overlay');
     this.toastEl = q('.toast');
     this.banner = q('.opp-banner');
+    q('.surrender').addEventListener('click', () => {
+      const v = this.view;
+      if (!v || v.winner !== null || v.time < 0) return;
+      if (confirm('Desistir desta partida? Conta como derrota.')) this.send({ t: 'surrender' });
+    });
     const mute = q('.mute');
     mute.textContent = isMuted() ? '🔇' : '🔊';
     mute.addEventListener('click', () => (mute.textContent = toggleMute() ? '🔇' : '🔊'));
@@ -166,7 +177,10 @@ export class GameScreen {
     this.syncEffects(this.board.opp, view.opp.effects);
 
     // Revanche: começa um histórico novo.
-    if (view.winner === null && this.lastWinner !== null) this.logList.innerHTML = '<p class="log-empty">Ainda nada aconteceu.</p>';
+    if (view.winner === null && this.lastWinner !== null) {
+      this.logList.innerHTML = '<p class="log-empty">Ainda nada aconteceu.</p>';
+      this.surrendered = null;
+    }
     if (view.winner !== null && this.lastWinner === null) {
       if (view.winner === view.you) sfx.win();
       else if (view.winner !== 'draw') sfx.lose();
@@ -174,6 +188,14 @@ export class GameScreen {
     this.lastWinner = view.winner;
 
     this.clock.textContent = clockText(Math.max(0, view.time));
+    // Fases de energia: avisa quando a regeneração acelera.
+    const mult = energyMultiplier(Math.max(0, view.time));
+    if (view.time >= 0 && view.winner === null && this.lastEnergyMult && mult > this.lastEnergyMult) {
+      this.toast(`⚡ Energia mais rápida: +1 a cada ${fmt(1 / (CONFIG.baseStats.energyRegen * mult))}s`);
+      sfx.go();
+    }
+    this.lastEnergyMult = mult;
+    this.clock.title = `Energia ×${fmt(mult)}`;
     this.countdown.hidden = view.time >= 0;
     const count = view.time < 0 ? Math.ceil(-view.time) : 0;
     if (count !== this.lastCount) {
@@ -218,7 +240,8 @@ export class GameScreen {
       (cell.firstElementChild as HTMLElement).style.width = locked ? '0' : `${fill * 100}%`;
     });
     hud.energyText.textContent = `${Math.floor(p.energy)}/${p.stats.maxEnergy}`;
-    hud.regen.textContent = p.stats.energyRegen > 0 ? `+1 a cada ${fmt(1 / p.stats.energyRegen)}s` : 'parada';
+    const regen = p.stats.energyRegen * energyMultiplier(Math.max(0, this.view?.time ?? 0));
+    hud.regen.textContent = regen > 0 ? `+1 a cada ${fmt(1 / regen)}s` : 'parada';
     hud.regen.classList.toggle('debuff', p.stats.energyRegen < p.base.energyRegen);
     hud.regen.classList.toggle('buff', p.stats.energyRegen > p.base.energyRegen);
   }
@@ -436,6 +459,11 @@ export class GameScreen {
         this.log(view, e.cardId, mine(e.player) ? `Estavas imune a <b>${name}</b>` : `O adversário estava imune a <b>${name}</b>`, 'info');
         break;
       }
+      case 'surrender': {
+        this.surrendered = e.player;
+        this.log(view, null, mine(e.player) ? '<b>Tu</b> desististe' : `<b>${escapeHtml(view.opp.name)}</b> desistiu`, 'info');
+        break;
+      }
       case 'cured': {
         sfx.cured();
         const name = escapeHtml(getCard(e.cardId).name);
@@ -446,13 +474,14 @@ export class GameScreen {
     }
   }
 
-  private log(view: GameView, cardId: string, html: string, cls: 'me' | 'opp' | 'info') {
-    const card = getCard(cardId);
+  /** `cardId` null: entrada sem carta (ex.: desistência). */
+  private log(view: GameView, cardId: string | null, html: string, cls: 'me' | 'opp' | 'info') {
+    const card = cardId ? getCard(cardId) : null;
     this.logList.querySelector('.log-empty')?.remove();
     const el = document.createElement('div');
-    el.className = `log-entry ${cls} type-${card.type}`;
-    el.dataset.card = cardId; // permite ver a carta em grande
-    el.innerHTML = `<span class="log-time">${clockText(Math.max(0, view.time))}</span><span class="log-emoji">${card.emoji}</span><span class="log-text">${html}</span>`;
+    el.className = `log-entry ${cls}${card ? ` type-${card.type}` : ''}`;
+    if (cardId) el.dataset.card = cardId; // permite ver a carta em grande
+    el.innerHTML = `<span class="log-time">${clockText(Math.max(0, view.time))}</span><span class="log-emoji">${card?.emoji ?? '🏳️'}</span><span class="log-text">${html}</span>`;
     this.logList.prepend(el);
     while (this.logList.children.length > 60) this.logList.lastElementChild!.remove();
   }
@@ -478,7 +507,8 @@ export class GameScreen {
     const oppIdx = view.you === 0 ? 1 : 0;
     const asked = view.rematch[view.you];
     const oppAsked = view.rematch[oppIdx];
-    const note = !view.opponentConnected ? 'O adversário saiu.' : oppAsked ? 'O adversário quer revanche!' : '';
+    const quit = this.surrendered === null ? '' : this.surrendered === view.you ? 'Desististe. ' : 'O adversário desistiu. ';
+    const note = quit + (!view.opponentConnected ? 'O adversário saiu.' : oppAsked ? 'O adversário quer revanche!' : '');
     const d = view.ratingDelta;
     const rating =
       view.ranked && d !== null && view.rating !== null

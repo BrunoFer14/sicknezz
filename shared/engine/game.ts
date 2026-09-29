@@ -1,5 +1,5 @@
 import { getCard, type CardDef } from '../cards';
-import { CONFIG } from './config';
+import { CONFIG, energyMultiplier } from './config';
 import { getMechanic, type EffectSpec, type MechanicContext } from './mechanics';
 import { computeStats } from './stats';
 import type { ActiveEffect, CardType, GameState, PlayerIndex, PlayerState, Side, TargetKind } from './types';
@@ -158,7 +158,7 @@ export function tick(state: GameState, dt: number) {
   state.players.forEach((p, i) => {
     const target = i as PlayerIndex;
     const stats = computeStats(p);
-    p.energy = Math.min(stats.maxEnergy, p.energy + stats.energyRegen * dt);
+    p.energy = Math.min(stats.maxEnergy, p.energy + stats.energyRegen * energyMultiplier(state.time) * dt);
 
     for (const e of [...p.effects]) {
       if (!p.effects.includes(e)) continue; // removido por outro efeito neste tick

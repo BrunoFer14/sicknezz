@@ -16,4 +16,21 @@ export const CONFIG = {
     virusDamageTaken: 1,
     bacteriaDamageTaken: 1,
   } satisfies Stats,
+  /**
+   * A regeneração de energia acelera ao longo do jogo: a partir de `at` segundos é multiplicada por `mult`.
+   * Começa lento e acelera para as partidas não se arrastarem.
+   */
+  energyPhases: [
+    { at: 0, mult: 0.75 }, //  0:00  1 a cada 2s (arranque um pouco mais lento)
+    { at: 60, mult: 1 }, //    1:00  1 a cada 1,5s
+    { at: 180, mult: 1.5 }, // 3:00  1 a cada 1s
+    { at: 240, mult: 3 }, //   4:00  1 a cada 0,5s (morte súbita)
+  ],
 };
+
+/** Multiplicador da regeneração de energia no segundo `time` do jogo. */
+export function energyMultiplier(time: number): number {
+  let mult = 1;
+  for (const ph of CONFIG.energyPhases) if (time >= ph.at) mult = ph.mult;
+  return mult;
+}

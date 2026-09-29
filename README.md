@@ -16,7 +16,12 @@ Para produção: `npm run build` e depois `npm start`. O servidor fica em http:/
 ## Regras
 
 - 100 de vida. Perde quem chegar a 0 primeiro. Não há limite de tempo.
-- Energia: começa em 0, máximo 10, +1 a cada 1,5 segundos.
+- Energia: começa em 0, máximo 10. A regeneração acelera ao longo do jogo (`energyPhases` no config):
+  - 0:00 → +1 a cada 2s
+  - 1:00 → +1 a cada 1,5s
+  - 3:00 → +1 a cada 1s
+  - 4:00 → +1 a cada 0,5s (morte súbita)
+- Há um botão 🏳️ para desistir (conta como derrota).
 - **Procurar adversário**: matchmaking automático. Conta para o ranking (pontos Elo, começa em 1000).
 - **Criar sala / código**: partida amigável com um amigo. Conta para as estatísticas, mas não para os pontos.
 - Se a ligação cair, tens 30 segundos para voltar (basta recarregar a página). Se não voltares, perdes.

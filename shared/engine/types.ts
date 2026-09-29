@@ -63,7 +63,8 @@ export type GameEvent =
   | { type: 'heal'; player: PlayerIndex; amount: number }
   | { type: 'energyLoss'; player: PlayerIndex; amount: number }
   | { type: 'blocked'; player: PlayerIndex; cardId: string }
-  | { type: 'cured'; player: PlayerIndex; cardId: string };
+  | { type: 'cured'; player: PlayerIndex; cardId: string }
+  | { type: 'surrender'; player: PlayerIndex };
 
 export interface GameState {
   /** Segundos de jogo. Negativo durante a contagem inicial. */
