@@ -64,7 +64,9 @@ export type GameEvent =
   | { type: 'energyLoss'; player: PlayerIndex; amount: number }
   | { type: 'blocked'; player: PlayerIndex; cardId: string }
   | { type: 'cured'; player: PlayerIndex; cardId: string }
-  | { type: 'surrender'; player: PlayerIndex };
+  | { type: 'surrender'; player: PlayerIndex }
+  /** A doença que `player` jogou também o infetou a ele. */
+  | { type: 'contagion'; player: PlayerIndex; cardId: string };
 
 export interface GameState {
   /** Segundos de jogo. Negativo durante a contagem inicial. */

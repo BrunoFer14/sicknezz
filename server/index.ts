@@ -6,8 +6,9 @@ import { WebSocketServer, type WebSocket } from 'ws';
 import { validateDeck } from '../shared/cards';
 import type { PlayerIndex } from '../shared/engine/types';
 import type { ClientMsg } from '../shared/protocol';
+import { BOT_LEVELS, type BotLevel } from './bot';
 import { Room, send } from './room';
-import { Store, type Profile } from './store';
+import { Store, type GameMode, type Profile } from './store';
 
 const PORT = Number(process.env.PORT) || 3001;
 const DIST = fileURLToPath(new URL('../dist', import.meta.url));
@@ -66,9 +67,9 @@ function cleanName(name: unknown): string {
   return (typeof name === 'string' ? name.trim().slice(0, 16) : '') || 'Jogador';
 }
 
-function makeRoom(ranked: boolean): Room {
+function makeRoom(mode: GameMode): Room {
   const code = newCode();
-  const room = new Room(code, ranked, {
+  const room = new Room(code, mode, {
     onEmpty: () => rooms.delete(code),
     onGameOver: (result) => store.recordGame(result),
   });
@@ -131,7 +132,7 @@ wss.on('connection', (ws) => {
     }
     if (!conn.session) return; // o cliente tem de dizer "hello" primeiro
 
-    if (msg.t === 'create' || msg.t === 'join' || msg.t === 'queue') {
+    if (msg.t === 'create' || msg.t === 'join' || msg.t === 'queue' || msg.t === 'bot') {
       const deckError = validateDeck(msg.deck);
       if (deckError) return send(ws, { t: 'error', message: deckError });
       if (conn.profile) store.setName(conn.profile, cleanName(msg.name));
@@ -140,7 +141,7 @@ wss.on('connection', (ws) => {
     switch (msg.t) {
       case 'create':
         leaveAll(conn);
-        enter(conn, makeRoom(false), cleanName(msg.name), msg.deck);
+        enter(conn, makeRoom('friendly'), cleanName(msg.name), msg.deck);
         break;
       case 'join': {
         const room = rooms.get(String(msg.code).toUpperCase().trim());
@@ -159,7 +160,7 @@ wss.on('connection', (ws) => {
           break;
         }
         const [opp] = queue.splice(oi, 1);
-        const room = makeRoom(true);
+        const room = makeRoom('ranked');
         enter(opp.conn, room, opp.name, opp.deck);
         enter(conn, room, cleanName(msg.name), msg.deck);
         break;
@@ -167,6 +168,14 @@ wss.on('connection', (ws) => {
       case 'play':
         if (Number.isInteger(msg.handIndex)) conn.room?.play(conn.index, msg.handIndex, msg.side === 'self' ? 'self' : 'opponent');
         break;
+      case 'bot': {
+        leaveAll(conn);
+        const level: BotLevel = msg.level in BOT_LEVELS ? msg.level : 'normal';
+        const room = makeRoom('bot');
+        room.addBot(level);
+        enter(conn, room, cleanName(msg.name), msg.deck);
+        break;
+      }
       case 'surrender':
         conn.room?.surrender(conn.index);
         break;

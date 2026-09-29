@@ -1,10 +1,11 @@
 import { getCard } from '../../shared/cards';
 import type { ServerMsg } from '../../shared/protocol';
 import { escapeHtml } from './card';
-import { activeDeckIndex, deleteDeck, listDecks, setActiveDeck } from './deck';
+import { activeDeckIndex, deleteDeck, isComplete, listDecks, setActiveDeck } from './deck';
 
 interface LobbyActions {
   queue(name: string): void;
+  bot(name: string, level: BotLevel): void;
   create(name: string): void;
   join(code: string, name: string): void;
   leave(): void;
@@ -13,7 +14,27 @@ interface LobbyActions {
   openStats(): void;
 }
 
+export type BotLevel = 'facil' | 'normal' | 'dificil';
+
 const NAME_KEY = 'sicknezz:name';
+const BOT_LEVEL_KEY = 'sicknezz:botLevel';
+
+function loadBotLevel(): BotLevel {
+  try {
+    const v = localStorage.getItem(BOT_LEVEL_KEY);
+    return v === 'facil' || v === 'dificil' ? v : 'normal';
+  } catch {
+    return 'normal';
+  }
+}
+
+function saveBotLevel(level: BotLevel) {
+  try {
+    localStorage.setItem(BOT_LEVEL_KEY, level);
+  } catch {
+    /* ignorar */
+  }
+}
 
 function loadName(): string {
   try {
@@ -54,6 +75,14 @@ export class LobbyScreen {
           <input id="name" maxlength="16" placeholder="Jogador" value="${escapeHtml(loadName())}" />
         </label>
         <button id="queue" class="btn primary big">⚔️ Procurar adversário</button>
+        <div class="row">
+          <button id="bot" class="btn">🤖 Treinar contra a IA</button>
+          <select id="bot-level" title="Dificuldade">
+            <option value="facil">Fácil</option>
+            <option value="normal">Normal</option>
+            <option value="dificil">Difícil</option>
+          </select>
+        </div>
         <div class="divider"><span>ou joga com um amigo</span></div>
         <button id="create" class="btn">Criar sala</button>
         <div class="row">
@@ -72,6 +101,10 @@ export class LobbyScreen {
     const codeInput = this.root.querySelector<HTMLInputElement>('#code')!;
     const join = () => codeInput.value.trim() && this.actions.join(codeInput.value.trim(), name());
     this.root.querySelector('#queue')!.addEventListener('click', () => this.actions.queue(name()));
+    const level = this.root.querySelector<HTMLSelectElement>('#bot-level')!;
+    level.value = loadBotLevel();
+    level.addEventListener('change', () => saveBotLevel(level.value as BotLevel));
+    this.root.querySelector('#bot')!.addEventListener('click', () => this.actions.bot(name(), level.value as BotLevel));
     this.root.querySelector('#create')!.addEventListener('click', () => this.actions.create(name()));
     this.root.querySelector('#join')!.addEventListener('click', join);
     codeInput.addEventListener('keydown', (e) => e.key === 'Enter' && join());
@@ -95,7 +128,7 @@ export class LobbyScreen {
         .join('')}</div>
       <div class="deck-current">
         <div>
-          <div class="deck-name">${escapeHtml(deck.name)}</div>
+          <div class="deck-name">${escapeHtml(deck.name)}${isComplete(deck) ? '' : ' <span class="deck-warn">⚠️ incompleto</span>'}</div>
           <div class="deck-emojis">${deck.cards
             .map((id) => `<span title="${escapeHtml(getCard(id).name)}">${getCard(id).emoji}</span>`)
             .join('')}</div>

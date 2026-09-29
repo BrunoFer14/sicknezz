@@ -1,8 +1,8 @@
 import { CARD_TYPES, getCard } from '../../shared/cards';
-import type { StatsPayload } from '../../shared/protocol';
+import type { MatchRecord, StatsPayload } from '../../shared/protocol';
 import { escapeHtml } from './card';
 
-type Tab = 'me' | 'ranking' | 'cards';
+type Tab = 'me' | 'history' | 'ranking' | 'cards';
 
 const pct = (a: number, b: number) => (b ? `${Math.round((a / b) * 100)}%` : '—');
 
@@ -24,6 +24,7 @@ export class StatsScreen {
       </header>
       <div class="filters">
         <button class="chip" data-tab="me">👤 As tuas</button>
+        <button class="chip" data-tab="history">📜 Histórico</button>
         <button class="chip" data-tab="ranking">🏆 Ranking</button>
         <button class="chip" data-tab="cards">🃏 Cartas</button>
       </div>
@@ -51,7 +52,14 @@ export class StatsScreen {
     this.root.querySelectorAll<HTMLElement>('[data-tab]').forEach((b) => b.classList.toggle('active', b.dataset.tab === this.tab));
     if (!this.stats) return;
     const body = this.root.querySelector('.stats-body')!;
-    body.innerHTML = this.tab === 'me' ? this.renderMe() : this.tab === 'ranking' ? this.renderRanking() : this.renderCards();
+    body.innerHTML =
+      this.tab === 'me'
+        ? this.renderMe()
+        : this.tab === 'history'
+          ? this.renderHistory()
+          : this.tab === 'ranking'
+            ? this.renderRanking()
+            : this.renderCards();
   }
 
   private renderMe(): string {
@@ -75,6 +83,12 @@ export class StatsScreen {
       <p class="muted">Os pontos só mudam nas partidas de "Procurar adversário". As salas com código são amigáveis.</p>
       <h4>Cartas que mais jogas</h4>
       ${top.length ? `<ol class="top-cards">${top.map(([id, n]) => `<li>${getCard(id).emoji} ${escapeHtml(getCard(id).name)} <span class="muted">${n}×</span></li>`).join('')}</ol>` : '<p class="muted">—</p>'}`;
+  }
+
+  private renderHistory(): string {
+    const rows = this.stats!.history;
+    if (!rows.length) return '<p class="muted">Ainda não tens partidas no histórico.</p>';
+    return `<div class="history">${rows.map(historyRow).join('')}</div>`;
   }
 
   private renderRanking(): string {
@@ -103,6 +117,29 @@ export class StatsScreen {
           .join('')}</tbody>
       </table></div>`;
   }
+}
+
+const RESULT = { win: ['Vitória', 'win'], loss: ['Derrota', 'lose'], draw: ['Empate', 'draw'] } as const;
+const MODE = { ranked: '⚔️ Ranked', friendly: '👥 Amigável', bot: '🤖 Contra IA' } as const;
+
+function historyRow(m: MatchRecord): string {
+  const [label, cls] = RESULT[m.result];
+  const when = new Date(m.at).toLocaleString('pt-PT', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+  const dur = `${Math.floor(m.duration / 60)}:${String(m.duration % 60).padStart(2, '0')}`;
+  const delta = m.ratingDelta === null ? '' : `<span class="rating ${m.ratingDelta >= 0 ? 'up' : 'down'}">${m.ratingDelta >= 0 ? '+' : ''}${m.ratingDelta}</span>`;
+  const quit = m.surrendered === 'me' ? ' · desististe' : m.surrendered === 'opp' ? ' · o adversário desistiu' : '';
+  const deck = m.deck
+    .filter(safeCard)
+    .map((id) => `<span title="${escapeHtml(getCard(id).name)}">${getCard(id).emoji}</span>`)
+    .join('');
+  return `
+    <div class="history-row ${cls}">
+      <div class="history-main">
+        <b class="history-result">${label}</b> contra <b>${escapeHtml(m.opponent)}</b> ${delta}
+        <div class="muted history-meta">${MODE[m.mode]} · ${dur} · ${when}${quit}</div>
+      </div>
+      <div class="history-deck">${deck}</div>
+    </div>`;
 }
 
 /** Cartas removidas do jogo podem ainda aparecer nas estatísticas antigas. */

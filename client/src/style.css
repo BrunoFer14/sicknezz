@@ -604,3 +604,35 @@ input:focus { outline: none; border-color: var(--toxic); }
 /* AVC: cartas bloqueadas. */
 .card.slot-locked { filter: grayscale(1) brightness(.5); }
 .card.slot-locked::after { content: '🔒'; position: absolute; inset: 0; display: grid; place-items: center; font-size: 28px; }
+.deck-warn { color: #ff9b4a; font-size: 12px; font-weight: 600; }
+
+/* Seletor de dificuldade da IA */
+select {
+  font: inherit;
+  color: inherit;
+  background: var(--bg2);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 8px 10px;
+}
+/* Histórico de partidas */
+.history { display: flex; flex-direction: column; gap: 6px; }
+.history-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-left-width: 4px;
+  border-radius: 10px;
+  background: var(--bg2);
+}
+.history-row.win { border-left-color: var(--toxic); }
+.history-row.lose { border-left-color: var(--blood); }
+.history-row.draw { border-left-color: var(--muted); }
+.history-row.win .history-result { color: var(--toxic); }
+.history-row.lose .history-result { color: var(--blood); }
+.history-meta { font-size: 12px; margin-top: 2px; }
+.history-deck { display: flex; flex-wrap: wrap; gap: 1px; font-size: 14px; max-width: 45%; justify-content: flex-end; }
+.history-row .rating { font-size: 12px; margin: 0 0 0 4px; }

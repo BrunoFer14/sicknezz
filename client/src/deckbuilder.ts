@@ -49,7 +49,6 @@ function cardRoles(id: string): Set<Role> {
       case 'drainEnergyOverTime':
       case 'drainEnergyAbove':
       case 'gainEnergyOverTime':
-      case 'moodSwing':
         roles.add('energia');
         break;
       case 'statModifier':

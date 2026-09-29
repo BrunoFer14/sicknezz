@@ -10,6 +10,8 @@ export type ClientMsg =
   | { t: 'join'; code: string; name: string; deck: string[] }
   /** Entrar na fila de matchmaking (conta para o ranking). */
   | { t: 'queue'; name: string; deck: string[] }
+  /** Jogar contra a IA. */
+  | { t: 'bot'; name: string; deck: string[]; level: 'facil' | 'normal' | 'dificil' }
   /** `side`: área onde a carta foi largada (só conta para cartas que se jogam em qualquer lado). */
   | { t: 'play'; handIndex: number; side?: Side }
   | { t: 'surrender' }
@@ -117,8 +119,24 @@ export interface CardStatRow {
   wins: number;
 }
 
+/** Uma partida no histórico de um jogador. */
+export interface MatchRecord {
+  /** Quando acabou (Date.now()). */
+  at: number;
+  opponent: string;
+  result: 'win' | 'loss' | 'draw';
+  mode: 'ranked' | 'friendly' | 'bot';
+  /** Duração em segundos. */
+  duration: number;
+  ratingDelta: number | null;
+  deck: string[];
+  surrendered: 'me' | 'opp' | null;
+}
+
 export interface StatsPayload {
   me: ProfileStats | null;
+  /** As tuas últimas partidas (mais recente primeiro). */
+  history: MatchRecord[];
   leaderboard: LeaderboardRow[];
   cards: CardStatRow[];
 }

@@ -14,6 +14,8 @@ export interface CardDef {
   target: TargetKind;
   /** Doença permanente: nenhum tratamento a tira (nem o Hospital). */
   permanent?: boolean;
+  /** Contágio: probabilidade (0–1) de a doença também infetar quem a jogou. */
+  contagion?: number;
   effects: EffectSpec[];
 }
 
@@ -63,9 +65,10 @@ export const CARDS = defineCards({
     emoji: '🦠',
     type: 'virus',
     cost: 5,
-    description: 'Tira 25 de vida em 12 segundos.',
+    description: 'Tira 30 de vida em 12 segundos. Contágio: 25% de hipótese de também te infetar a ti.',
     target: 'opponent',
-    effects: [{ mechanic: 'damageOverTime', params: { amount: 25, duration: 12 } }],
+    contagion: 0.25,
+    effects: [{ mechanic: 'damageOverTime', params: { amount: 30, duration: 12 } }],
   },
   ebola: {
     name: 'Ébola',
@@ -81,7 +84,7 @@ export const CARDS = defineCards({
     name: 'SIDA',
     emoji: '🎗️',
     type: 'virus',
-    cost: 5,
+    cost: 10,
     description: 'O adversário passa a sofrer o dobro do dano de vírus e bactérias. Permanente: nenhum tratamento a cura.',
     target: 'opponent',
     permanent: true,
@@ -276,15 +279,6 @@ export const CARDS = defineCards({
     description: 'O adversário esquece a carta mais cara da mão: vai para o fim da fila e entra a próxima.',
     target: 'opponent',
     effects: [{ mechanic: 'forgetBest', params: {} }],
-  },
-  bipolaridade: {
-    name: 'Bipolaridade',
-    emoji: '🎭',
-    type: 'mental',
-    cost: 2,
-    description: 'Durante 16s a regeneração de energia muda a cada 4s. Em ti: +80% / −20%. No adversário: −80% / +20%.',
-    target: 'any',
-    effects: [{ mechanic: 'moodSwing', params: { strong: 0.8, weak: 0.2, phase: 4, duration: 16 } }],
   },
   alzheimer: {
     name: 'Alzheimer',

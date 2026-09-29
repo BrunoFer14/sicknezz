@@ -148,16 +148,6 @@ export const MECHANICS = {
     onApply: ({ state, target }, p) => drainEnergy(state, target, state.players[target].energy - p.keep),
   }),
 
-  /**
-   * A regeneração de energia oscila a cada `phase` segundos.
-   * Em quem joga: +strong, −weak, +strong...  No adversário: −strong, +weak, −strong...
-   */
-  moodSwing: defineMechanic<{ strong: number; weak: number; phase: number; duration: number }>({
-    duration: (p) => p.duration,
-    onApply: (ctx, p, e) => setMood(ctx, p, e!),
-    onTick: (ctx, p, e) => setMood(ctx, p, e),
-  }),
-
   /** A carta mais cara da mão do alvo vai para o fim da fila e entra a próxima. */
   forgetBest: defineMechanic<Record<string, never>>({
     onApply: ({ state, target }) => {
@@ -235,13 +225,6 @@ export const MECHANICS = {
     blocks: (p) => p.types,
   }),
 } satisfies Record<string, MechanicDef<any>>;
-
-function setMood(ctx: MechanicContext, p: { strong: number; weak: number; phase: number }, e: ActiveEffect) {
-  const high = Math.floor(e.elapsed / p.phase) % 2 === 0;
-  const up = ctx.source === ctx.target ? high : !high;
-  const value = ctx.source === ctx.target ? (up ? 1 + p.strong : 1 - p.weak) : up ? 1 + p.weak : 1 - p.strong;
-  e.modifiers = [{ stat: 'energyRegen', op: 'mul', value }];
-}
 
 export type MechanicId = keyof typeof MECHANICS;
 

@@ -3,7 +3,8 @@ import { CONFIG } from '../shared/engine/config';
 import { createGame, other, playCard, tick } from '../shared/engine/game';
 import type { GameState, PlayerIndex, Side } from '../shared/engine/types';
 import { makeView, type ServerMsg } from '../shared/protocol';
-import type { GameResult, Profile } from './store';
+import { Bot, BOT_LEVELS, botDeck, type BotLevel } from './bot';
+import type { GameMode, GameResult, Profile } from './store';
 
 /** Segundos que um jogador desligado tem para voltar antes de perder a partida. */
 const RECONNECT_GRACE = 30;
@@ -21,6 +22,8 @@ export interface Seat {
   profile: Profile | null;
   graceUntil: number | null;
   graceTimer: NodeJS.Timeout | null;
+  /** Lugar ocupado pela IA (modo contra o computador). */
+  bot?: Bot;
 }
 
 export interface RoomHooks {
@@ -38,14 +41,39 @@ export class Room {
   private plays: [Record<string, number>, Record<string, number>] = [{}, {}];
   private ratingDelta: [number, number] | null = null;
   private recorded = false;
+  /** Quem desistiu nesta partida (para o histórico). */
+  private surrendered: PlayerIndex | null = null;
   private timer: NodeJS.Timeout | null = null;
   private last = 0;
 
   constructor(
     readonly code: string,
-    readonly ranked: boolean,
+    readonly mode: GameMode,
     private hooks: RoomHooks,
   ) {}
+
+  get ranked(): boolean {
+    return this.mode === 'ranked';
+  }
+
+  /** Põe a IA no segundo lugar (chamar antes de o jogador entrar). */
+  addBot(level: BotLevel) {
+    this.seats[1] = {
+      ws: null,
+      session: 'bot',
+      name: `🤖 IA ${BOT_LEVELS[level].name}`,
+      deck: botDeck(),
+      profile: null,
+      graceUntil: null,
+      graceTimer: null,
+      bot: new Bot(level, 1),
+    };
+  }
+
+  /** Há alguém humano na sala? */
+  private hasHumans(): boolean {
+    return this.seats.some((s) => s && !s.bot);
+  }
 
   addPlayer(seat: Omit<Seat, 'graceUntil' | 'graceTimer'>): PlayerIndex | null {
     if (this.game) return null;
@@ -102,7 +130,7 @@ export class Room {
       this.game.winner = other(i);
       this.checkGameOver();
     }
-    if (!this.seats[0] && !this.seats[1]) {
+    if (!this.hasHumans()) {
       this.stop();
       this.hooks.onEmpty();
       return;
@@ -128,14 +156,17 @@ export class Room {
   surrender(i: PlayerIndex) {
     if (!this.game || this.game.winner !== null) return;
     this.game.winner = other(i);
+    this.surrendered = i;
     this.game.events.push({ type: 'surrender', player: i });
     this.checkGameOver();
     this.broadcast();
   }
 
   requestRematch(i: PlayerIndex) {
-    if (!this.game || this.game.winner === null || !this.seats[other(i)]?.ws) return;
+    const opp = this.seats[other(i)];
+    if (!this.game || this.game.winner === null || !(opp?.ws || opp?.bot)) return;
     this.rematch[i] = true;
+    if (opp.bot) this.rematch[other(i)] = true; // a IA aceita sempre
     if (this.rematch[0] && this.rematch[1]) this.start();
     else this.broadcast();
   }
@@ -149,7 +180,12 @@ export class Room {
   private start() {
     const [a, b] = this.seats as [Seat, Seat];
     this.players = [a, b];
+    if (b.bot) {
+      b.deck = botDeck();
+      b.bot = new Bot(b.bot.level, 1);
+    }
     this.game = createGame([a.name, b.name], [a.deck, b.deck]);
+    this.surrendered = null;
     this.rematch = [false, false];
     this.plays = [{}, {}];
     this.ratingDelta = null;
@@ -170,10 +206,13 @@ export class Room {
     const [a, b] = this.players;
     this.ratingDelta = this.hooks.onGameOver({
       profiles: [a.profile, b.profile],
+      names: [a.name, b.name],
       decks: [a.deck, b.deck],
       plays: this.plays,
       winner: this.game.winner,
-      ranked: this.ranked,
+      mode: this.mode,
+      duration: Math.max(0, this.game.time),
+      surrendered: this.surrendered,
     });
   }
 
@@ -183,6 +222,10 @@ export class Room {
     this.last = now;
     if (!this.game || this.game.winner !== null) return;
     tick(this.game, dt);
+    this.seats.forEach((s, i) => {
+      const move = s?.bot?.think(this.game!, dt);
+      if (move && this.game!.winner === null) this.play(i as PlayerIndex, move.handIndex, move.side);
+    });
     this.checkGameOver();
     this.broadcast();
   }
@@ -197,7 +240,7 @@ export class Room {
       const opp = this.seats[other(i)];
       const view = makeView(this.game, i, events, {
         rematch: this.rematch,
-        opponentConnected: !!opp?.ws,
+        opponentConnected: !!(opp?.ws || opp?.bot),
         opponentReconnectIn: opp && !opp.ws && opp.graceUntil ? Math.max(0, (opp.graceUntil - Date.now()) / 1000) : null,
         ranked: this.ranked,
         rating: this.ranked ? (this.players?.[i].profile?.rating ?? null) : null,

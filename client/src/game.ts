@@ -459,6 +459,12 @@ export class GameScreen {
         this.log(view, e.cardId, mine(e.player) ? `Estavas imune a <b>${name}</b>` : `O adversário estava imune a <b>${name}</b>`, 'info');
         break;
       }
+      case 'contagion': {
+        const name = escapeHtml(getCard(e.cardId).name);
+        this.float(mine(e.player) ? this.hud.me : this.hud.opp, 'Contágio!', 'info');
+        this.log(view, e.cardId, mine(e.player) ? `<b>${name}</b> contagiou-te a ti também!` : `<b>${name}</b> contagiou o adversário também!`, 'info');
+        break;
+      }
       case 'surrender': {
         this.surrendered = e.player;
         this.log(view, null, mine(e.player) ? '<b>Tu</b> desististe' : `<b>${escapeHtml(view.opp.name)}</b> desistiu`, 'info');

@@ -22,6 +22,9 @@ Para produção: `npm run build` e depois `npm start`. O servidor fica em http:/
   - 3:00 → +1 a cada 1s
   - 4:00 → +1 a cada 0,5s (morte súbita)
 - Há um botão 🏳️ para desistir (conta como derrota).
+- **Contra a IA** (🤖, Fácil/Normal/Difícil): treino, não conta para o ranking nem para as estatísticas. A IA está em `server/bot.ts`.
+- **Histórico**: as últimas 30 partidas de cada jogador ficam no perfil (aba 📜 nas estatísticas).
+- **Contágio**: uma carta com `contagion` (ex.: Covid) tem essa probabilidade de também infetar quem a jogou.
 - **Procurar adversário**: matchmaking automático. Conta para o ranking (pontos Elo, começa em 1000).
 - **Criar sala / código**: partida amigável com um amigo. Conta para as estatísticas, mas não para os pontos.
 - Se a ligação cair, tens 30 segundos para voltar (basta recarregar a página). Se não voltares, perdes.
@@ -123,7 +126,6 @@ O TypeScript valida os `params` de cada mecânica, e o editor dá autocomplete. 
 | `drainEnergyAbove`    | `keep`                                            | Burnout               |
 | `costIncrease`      | `types`, `amount`                                 | Alergia               |
 | `costLimit`         | `max`, `duration`                                 | Fratura               |
-| `moodSwing`         | `strong`, `weak`, `phase`, `duration`             | Bipolaridade          |
 | `shuffleHand`       | —                                                 | Alzheimer             |
 | `forgetBest`        | —                                                 | Amnésia               |
 | `blind`             | `duration`                                        | Paranoia              |

@@ -110,6 +110,14 @@ export function playCard(state: GameState, player: PlayerIndex, handIndex: numbe
     }
     applyEffect(state, player, target, cardId, card, spec, playId);
   }
+  // Contágio: a doença pode também apanhar quem a jogou (conta como uma doença vinda do adversário).
+  const victim = other(player);
+  if (card.contagion && !blocked.has(victim) && Math.random() < card.contagion && !isImmune(p, card.type)) {
+    state.events.push({ type: 'contagion', player, cardId });
+    const contagionPlay = state.nextUid++;
+    p.effects = p.effects.filter((e) => !(e.cardId === cardId && e.source === victim));
+    for (const spec of card.effects) applyEffect(state, victim, player, cardId, card, spec, contagionPlay);
+  }
   finalize(state);
   return { ok: true };
 }

@@ -1,4 +1,5 @@
-import { DEFAULT_DECK, validateDeck } from '../../shared/cards';
+import { CARDS, DEFAULT_DECK, validateDeck } from '../../shared/cards';
+import { CONFIG } from '../../shared/engine/config';
 
 /** Chave antiga (só um baralho); é migrada para o primeiro espaço. */
 const OLD_DECK_KEY = 'sicknezz:deck';
@@ -19,9 +20,17 @@ interface DeckStore {
   decks: (SavedDeck | null)[];
 }
 
-function isSavedDeck(d: unknown): d is SavedDeck {
+/** Lê um baralho guardado, tirando cartas que já não existem no jogo. Null se não for um baralho. */
+function readSavedDeck(d: unknown): SavedDeck | null {
   const deck = d as SavedDeck | null;
-  return !!deck && typeof deck.name === 'string' && validateDeck(deck.cards) === null;
+  if (!deck || typeof deck.name !== 'string' || !Array.isArray(deck.cards)) return null;
+  const cards = [...new Set(deck.cards)].filter((id) => typeof id === 'string' && id in CARDS);
+  return cards.length ? { name: deck.name, cards } : null;
+}
+
+/** Um baralho pode ficar incompleto se uma carta for removida do jogo. */
+export function isComplete(deck: SavedDeck): boolean {
+  return validateDeck(deck.cards) === null;
 }
 
 function loadStore(): DeckStore {
@@ -29,7 +38,7 @@ function loadStore(): DeckStore {
   try {
     const saved = JSON.parse(localStorage.getItem(DECKS_KEY) ?? 'null');
     if (saved && Array.isArray(saved.decks)) {
-      store.decks = store.decks.map((_, i) => (isSavedDeck(saved.decks[i]) ? saved.decks[i] : null));
+      store.decks = store.decks.map((_, i) => readSavedDeck(saved.decks[i]));
       if (Number.isInteger(saved.active) && saved.active >= 0 && saved.active < MAX_DECKS) store.active = saved.active;
     } else {
       const old = JSON.parse(localStorage.getItem(OLD_DECK_KEY) ?? 'null');
@@ -68,10 +77,17 @@ export function setActiveDeck(index: number) {
   saveStore(store);
 }
 
-/** Cartas do baralho ativo (o que é usado para jogar). */
+/** Cartas do baralho ativo (o que é usado para jogar). Pode estar incompleto: ver activeDeckError. */
 export function loadDeck(): string[] {
   const store = loadStore();
   return [...(store.decks[store.active]?.cards ?? DEFAULT_DECK)];
+}
+
+/** Mensagem de erro se o baralho ativo não puder ser usado para jogar. */
+export function activeDeckError(): string | null {
+  const store = loadStore();
+  const deck = store.decks[store.active];
+  return deck && !isComplete(deck) ? `O baralho "${deck.name}" está incompleto (${deck.cards.length}/${CONFIG.deckSize}). Edita-o antes de jogar.` : null;
 }
 
 export function saveDeck(index: number, deck: SavedDeck) {

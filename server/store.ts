@@ -5,7 +5,7 @@ import { dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { CARD_IDS } from '../shared/cards';
 import type { PlayerIndex } from '../shared/engine/types';
-import type { StatsPayload } from '../shared/protocol';
+import type { MatchRecord, StatsPayload } from '../shared/protocol';
 
 export interface Profile {
   id: string;
@@ -18,6 +18,8 @@ export interface Profile {
   losses: number;
   draws: number;
   cardPlays: Record<string, number>;
+  /** Últimas partidas (mais recente primeiro). Perfis antigos não têm. */
+  history?: MatchRecord[];
 }
 
 export interface CardStat {
@@ -26,13 +28,24 @@ export interface CardStat {
   wins: number;
 }
 
+/** ranked: fila de matchmaking; friendly: sala com código; bot: contra a IA. */
+export type GameMode = 'ranked' | 'friendly' | 'bot';
+
 export interface GameResult {
   profiles: [Profile | null, Profile | null];
+  names: [string, string];
   decks: [string[], string[]];
   plays: [Record<string, number>, Record<string, number>];
   winner: PlayerIndex | 'draw';
-  ranked: boolean;
+  mode: GameMode;
+  /** Segundos de jogo. */
+  duration: number;
+  /** Quem desistiu, se alguém desistiu. */
+  surrendered: PlayerIndex | null;
 }
+
+/** Quantas partidas se guardam no histórico de cada jogador. */
+const HISTORY_SIZE = 30;
 
 const START_RATING = 1000;
 const ELO_K = 32;
@@ -147,12 +160,15 @@ export class Store {
     if (a && b && a.id === b.id) return null; // a jogar contra si próprio (dois separadores): não conta
     const score = (i: PlayerIndex) => (r.winner === 'draw' ? 0.5 : r.winner === i ? 1 : 0);
 
+    // As partidas contra a IA só entram no histórico (não contam para as estatísticas nem para o ranking).
+    const pvp = r.mode !== 'bot';
     const touched = new Set<string>();
     const cardStat = (id: string) => {
       touched.add(id);
       return (this.cards[id] ??= { plays: 0, games: 0, wins: 0 });
     };
     for (const i of [0, 1] as const) {
+      if (!pvp) continue;
       for (const id of r.decks[i]) {
         const s = cardStat(id);
         s.games++;
@@ -170,7 +186,7 @@ export class Store {
     }
 
     let delta: [number, number] | null = null;
-    if (r.ranked && a && b) {
+    if (r.mode === 'ranked' && a && b) {
       const expected = 1 / (1 + 10 ** ((b.rating - a.rating) / 400));
       const d = Math.round(ELO_K * (score(0) - expected));
       a.rating += d;
@@ -179,6 +195,22 @@ export class Store {
       b.rankedGames++;
       delta = [d, -d];
     }
+
+    r.profiles.forEach((p, i) => {
+      if (!p) return;
+      const opp = (1 - i) as PlayerIndex;
+      const entry: MatchRecord = {
+        at: Date.now(),
+        opponent: r.names[opp],
+        result: score(i as PlayerIndex) === 1 ? 'win' : score(i as PlayerIndex) === 0 ? 'loss' : 'draw',
+        mode: r.mode,
+        duration: Math.round(r.duration),
+        ratingDelta: delta?.[i] ?? null,
+        deck: [...r.decks[i]],
+        surrendered: r.surrendered === null ? null : r.surrendered === i ? 'me' : 'opp',
+      };
+      p.history = [entry, ...(p.history ?? [])].slice(0, HISTORY_SIZE);
+    });
 
     for (const p of r.profiles) if (p) this.backend.saveProfile(p).catch(logError);
     for (const id of touched) this.backend.saveCard(id, this.cards[id]).catch(logError);
@@ -197,6 +229,7 @@ export class Store {
       me: me && me.games > 0
         ? { name: me.name, rating: me.rating, games: me.games, rankedGames: me.rankedGames, wins: me.wins, losses: me.losses, draws: me.draws, cardPlays: me.cardPlays }
         : null,
+      history: me?.history ?? [],
       leaderboard,
       cards,
     };

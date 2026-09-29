@@ -1,6 +1,6 @@
 import './style.css';
 import type { ServerMsg } from '../../shared/protocol';
-import { listDecks, loadDeck, saveDeck, setActiveDeck } from './deck';
+import { activeDeckError, listDecks, loadDeck, saveDeck, setActiveDeck } from './deck';
 import { DeckBuilder } from './deckbuilder';
 import { GameScreen } from './game';
 import { identity } from './identity';
@@ -29,10 +29,18 @@ const net = connect({
   onStatus: (connected) => (netBanner.hidden = connected),
 });
 
+/** Mostra um erro se o baralho ativo estiver incompleto (ex.: uma carta foi removida do jogo). */
+function deckReady(): boolean {
+  const error = activeDeckError();
+  if (error) lobby.error(error);
+  return !error;
+}
+
 const lobby = new LobbyScreen(app, {
-  queue: (name) => net.send({ t: 'queue', name, deck: loadDeck() }),
-  create: (name) => net.send({ t: 'create', name, deck: loadDeck() }),
-  join: (code, name) => net.send({ t: 'join', code, name, deck: loadDeck() }),
+  queue: (name) => deckReady() && net.send({ t: 'queue', name, deck: loadDeck() }),
+  bot: (name, level) => deckReady() && net.send({ t: 'bot', name, deck: loadDeck(), level }),
+  create: (name) => deckReady() && net.send({ t: 'create', name, deck: loadDeck() }),
+  join: (code, name) => deckReady() && net.send({ t: 'join', code, name, deck: loadDeck() }),
   leave: () => {
     net.send({ t: 'leave' });
     screen = 'menu';
