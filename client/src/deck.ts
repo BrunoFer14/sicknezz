@@ -125,3 +125,35 @@ export function deleteDeck(index: number) {
   if (store.active === index) store.active = store.decks.findIndex(Boolean);
   saveStore(store);
 }
+
+// ---------- Códigos de baralho (para partilhar) ----------
+// Cada carta vira 3 caracteres, calculados a partir do id (e não da posição na lista),
+// para os códigos continuarem a funcionar quando entram cartas novas no jogo.
+const CODE_PREFIX = 'SK-';
+
+function cardCode(id: string): string {
+  let h = 0x811c9dc5; // FNV-1a
+  for (let i = 0; i < id.length; i++) h = Math.imul(h ^ id.charCodeAt(i), 0x01000193) >>> 0;
+  return (h % 36 ** 3).toString(36).toUpperCase().padStart(3, '0');
+}
+
+const BY_CODE = new Map(Object.keys(CARDS).map((id) => [cardCode(id), id]));
+if (BY_CODE.size !== Object.keys(CARDS).length) console.error('Dois ids de carta dão o mesmo código de baralho; muda o id de uma delas.');
+
+/** Código curto para partilhar as cartas de um baralho, ex.: "SK-0AF3K9...". */
+export function encodeDeck(cards: readonly string[]): string {
+  return CODE_PREFIX + cards.map(cardCode).join('');
+}
+
+/** Cartas de um código de baralho; ignora espaços e maiúsculas. Null se o código não for válido. */
+export function decodeDeck(code: string): string[] | null {
+  const raw = code.toUpperCase().replace(/\s+/g, '').replace(/^SK-?/, '');
+  if (!raw || raw.length % 3 !== 0) return null;
+  const cards: string[] = [];
+  for (let i = 0; i < raw.length; i += 3) {
+    const id = BY_CODE.get(raw.slice(i, i + 3));
+    if (!id) return null;
+    if (!cards.includes(id)) cards.push(id);
+  }
+  return cards.length <= CONFIG.deckSize ? cards : null;
+}

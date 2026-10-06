@@ -153,6 +153,14 @@ export const LORE: Partial<Record<CardId, CardLore>> = {
     what: 'Reflexo que limpa as vias respiratórias de muco, poeiras ou micróbios. É um dos sintomas mais comuns de infeções respiratórias — quanto mais infeções, mais tosse.',
     history: 'A tosse convulsa, causada por uma bactéria, era uma das principais causas de morte infantil antes da vacina, introduzida nos anos 1940.',
   },
+  vomitos: {
+    what: 'Forma de o corpo expulsar à força o que tem no estômago. Acontece muitas vezes com infeções como a gastroenterite ou intoxicações alimentares, e o maior perigo é a desidratação.',
+    history: 'O soro de reidratação oral, uma simples mistura de água, sal e açúcar, foi testado em grande escala nos anos 1970 e já salvou milhões de vidas de crianças com vómitos e diarreia.',
+  },
+  dorCabeca: {
+    what: 'Uma das queixas mais comuns, muitas vezes por cansaço, desidratação ou stress. É também um sintoma habitual de infeções como a gripe, quando o corpo está a combater um vírus. No jogo, deixa o adversário mais lento a reagir.',
+    history: 'A aspirina, um dos remédios mais usados contra a dor de cabeça, foi sintetizada pela Bayer em 1897, a partir de uma substância que já se tirava da casca do salgueiro.',
+  },
 
   // ---------- Tratamentos ----------
   medicacao: {

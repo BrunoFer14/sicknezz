@@ -16,6 +16,34 @@ const change = (name: string, before: string, after: string): NoteItem => ({ nam
 
 export const PATCH_NOTES: PatchNote[] = [
   {
+    version: '0.11',
+    date: '06/10/2026',
+    title: 'Abas no baralho',
+    sections: [
+      {
+        title: '🃏 Cartas novas',
+        items: [
+          '🤢 Vómitos (Sintoma, 1): só se o adversário tiver um vírus ou bactéria. Uma carta ao acaso da mão dele vai para o fim da fila e entra a próxima.',
+          '🤯 Dor de Cabeça (Sintoma, 1): só se o adversário tiver um vírus ou bactéria. A próxima carta dele custa +1 de energia.',
+        ],
+      },
+      {
+        title: '🔗 Partilhar baralhos',
+        items: [
+          'No construtor há agora "📋 Copiar código" e "📥 Colar código": copia o código do teu baralho e manda-o a um amigo, que o cola para ficar com as mesmas cartas.',
+        ],
+      },
+      {
+        title: '🃏 Construtor de baralhos',
+        items: [
+          'As cartas aparecem agora separadas em abas por classe (🦠 Vírus, 🧫 Bactéria, 🍔 Física, 🩹 Estado, 🧠 Mental, 💢 Sintoma, 💊 Tratamento), com uma aba 📚 Todas no fim.',
+          'Cada aba mostra quantas cartas dessa classe já tens no baralho.',
+          'A pesquisa procura em todas as classes e mostra os resultados agrupados por classe.',
+        ],
+      },
+    ],
+  },
+  {
     version: '0.10',
     date: '29/09/2026',
     title: 'Bebida Energética',

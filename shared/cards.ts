@@ -371,6 +371,26 @@ export const CARDS = defineCards({
     requires: ['virus', 'bacteria'],
     effects: [{ mechanic: 'damagePerDisease', params: { base: 0, per: 2, types: ['virus', 'bacteria'] } }],
   },
+  vomitos: {
+    name: 'Vómitos',
+    emoji: '🤢',
+    type: 'sintoma',
+    cost: 1,
+    description: 'Só se o adversário tiver um vírus ou bactéria. Uma carta ao acaso da mão dele vai para o fim da fila e entra a próxima.',
+    target: 'opponent',
+    requires: ['virus', 'bacteria'],
+    effects: [{ mechanic: 'replaceRandom', params: {} }],
+  },
+  dorCabeca: {
+    name: 'Dor de Cabeça',
+    emoji: '🤯',
+    type: 'sintoma',
+    cost: 1,
+    description: 'Só se o adversário tiver um vírus ou bactéria. A próxima carta dele custa +1 de energia.',
+    target: 'opponent',
+    requires: ['virus', 'bacteria'],
+    effects: [{ mechanic: 'costIncrease', params: { types: Object.keys(CARD_TYPES) as CardType[], amount: 1 } }],
+  },
 
   // ---------- Tratamentos (cada cura cobre uma família de doenças) ----------
   medicacao: {

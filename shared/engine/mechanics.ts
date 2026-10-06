@@ -66,6 +66,13 @@ export function spreadable(state: GameState, player: PlayerIndex, types: CardTyp
   return best;
 }
 
+/** A carta na posição `i` da mão do jogador vai para o fim da fila e entra a próxima (a mão tem sempre o mesmo tamanho). */
+function replaceInHand(pl: GameState['players'][number], i: number) {
+  if (!pl.borrowed[i]) pl.deck.push(pl.hand[i]);
+  pl.hand[i] = pl.deck.shift()!;
+  pl.borrowed[i] = false;
+}
+
 function defineMechanic<P>(def: MechanicDef<P>): MechanicDef<P> {
   return def;
 }
@@ -186,9 +193,15 @@ export const MECHANICS = {
       pl.hand.forEach((id, i) => {
         if (getCard(id).cost > getCard(pl.hand[best]).cost) best = i;
       });
-      if (!pl.borrowed[best]) pl.deck.push(pl.hand[best]);
-      pl.hand[best] = pl.deck.shift()!;
-      pl.borrowed[best] = false;
+      replaceInHand(pl, best);
+    },
+  }),
+
+  /** Uma carta ao acaso da mão do alvo vai para o fim da fila e entra a próxima. */
+  replaceRandom: defineMechanic<Record<string, never>>({
+    onApply: ({ state, target }) => {
+      const pl = state.players[target];
+      replaceInHand(pl, Math.floor(random(state) * pl.hand.length));
     },
   }),
 

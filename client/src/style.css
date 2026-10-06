@@ -138,6 +138,8 @@ input:focus { outline: none; border-color: var(--toxic); }
 .deck-slot:has(.card) { border: none; cursor: pointer; }
 .deck-slot .card { cursor: pointer; }
 .deck-slot:hover .card { filter: brightness(.7); }
+.deck-code { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
+.deck-code .btn { padding: 6px 12px; font-size: 13px; }
 .filter-box { display: flex; flex-direction: column; gap: 6px; }
 .card-search { max-width: 320px; width: 100%; margin: 0 auto 4px; }
 .filters { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; align-items: center; }
@@ -152,6 +154,42 @@ input:focus { outline: none; border-color: var(--toxic); }
   font-size: 13px;
 }
 .chip.active { border-color: var(--toxic); color: var(--toxic); }
+.type-tabs {
+  display: flex;
+  gap: 4px;
+  overflow-x: auto;
+  border-bottom: 2px solid var(--line);
+  scrollbar-width: thin;
+}
+.type-tab {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+  padding: 8px 14px;
+  border: 1px solid var(--line);
+  border-bottom: none;
+  border-radius: 10px 10px 0 0;
+  background: var(--bg2);
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 14px;
+}
+.type-tab:hover { filter: brightness(1.2); }
+.type-tab.active { background: var(--panel); color: var(--toxic); border-color: var(--toxic); }
+.tab-emoji { font-size: 18px; }
+.tab-count {
+  min-width: 18px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: var(--toxic);
+  color: #000;
+  font-size: 11px;
+  font-weight: 700;
+  text-align: center;
+}
+.tab-count:empty { display: none; }
+.pool-heading { grid-column: 1 / -1; margin: 8px 0 0; font-size: 15px; color: var(--muted); border-bottom: 1px solid var(--line); padding-bottom: 4px; }
 .pool { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 10px; }
 .pool .card { cursor: pointer; }
 .pool .card:hover { transform: translateY(-4px); }
@@ -170,6 +208,8 @@ input:focus { outline: none; border-color: var(--toxic); }
 @media (max-width: 600px) {
   .deck-slots { grid-template-columns: repeat(5, 1fr); }
   .pool { grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); }
+  .type-tab { padding: 8px 10px; }
+  .type-tab:not(.active) .tab-name { display: none; }
 }
 .logo {
   font-size: clamp(42px, 10vw, 72px);

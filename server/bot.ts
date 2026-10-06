@@ -210,6 +210,9 @@ export class Bot {
         case 'blind':
           value += 5;
           break;
+        case 'replaceRandom':
+          value += 3;
+          break;
         case 'shuffleHand':
           value += side === 'self' ? (this.handIsBad(state) ? 8 : 0) : 4;
           break;

@@ -2,7 +2,7 @@ import { CARD_IDS, CARD_TYPES, getCard } from '../../shared/cards';
 import { CONFIG } from '../../shared/engine/config';
 import type { CardType } from '../../shared/engine/types';
 import { cardEl, escapeHtml } from './card';
-import type { SavedDeck } from './deck';
+import { decodeDeck, encodeDeck, type SavedDeck } from './deck';
 import { cardRoles, ROLES, type Role } from './roles';
 
 const TYPE_ORDER = Object.keys(CARD_TYPES) as CardType[];
@@ -22,7 +22,9 @@ const COSTS: [CostRange, string, (cost: number) => boolean][] = [
   ['high', '5+', (c) => c >= 5],
 ];
 
-type FilterGroup = 'type' | 'role' | 'cost';
+type FilterGroup = 'role' | 'cost';
+/** Aba ativa: uma classe de cartas, ou todas. */
+type Tab = CardType | 'all';
 
 /** Sem acentos nem maiúsculas, para a pesquisa ("sepsis" encontra "Sépsis"). */
 const normalize = (s: string) => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
@@ -30,8 +32,10 @@ const normalize = (s: string) => s.normalize('NFD').replace(/[\u0300-\u036f]/g, 
 export class DeckBuilder {
   private root = document.createElement('div');
   private deck: string[];
+  /** Aba da classe que se está a ver; a pesquisa procura em todas. */
+  private tab: Tab = TYPE_ORDER[0];
   /** Filtros ativos por grupo ('all' = sem filtro); combinam-se todos. */
-  private filters: Record<FilterGroup, string> = { type: 'all', role: 'all', cost: 'all' };
+  private filters: Record<FilterGroup, string> = { role: 'all', cost: 'all' };
   private search = '';
 
   constructor(
@@ -52,12 +56,16 @@ export class DeckBuilder {
       </header>
       <p class="muted">Clica numa carta para a juntar ou tirar do baralho. Tens de escolher ${CONFIG.deckSize}. <a href="/cartas" target="_blank" rel="noopener">📖 Saber mais sobre cada carta</a></p>
       <div class="deck-slots"></div>
+      <div class="deck-code">
+        <button class="btn" id="copy-code" title="Copiar um código com as cartas deste baralho, para partilhar">📋 Copiar código</button>
+        <button class="btn" id="paste-code" title="Colar o código de um baralho de outra pessoa">📥 Colar código</button>
+      </div>
       <div class="filter-box">
-        <input class="card-search" type="search" placeholder="🔎 Procurar carta..." />
-        <div class="filters" data-group="type"><span class="filter-label">Tipo</span></div>
+        <input class="card-search" type="search" placeholder="🔎 Procurar em todas as cartas..." />
         <div class="filters" data-group="role"><span class="filter-label">Efeito</span></div>
         <div class="filters" data-group="cost"><span class="filter-label">Custo</span></div>
       </div>
+      <nav class="type-tabs"></nav>
       <div class="pool"></div>`;
 
     this.root.querySelector('#back')!.addEventListener('click', () => this.close(null));
@@ -65,8 +73,27 @@ export class DeckBuilder {
       this.close({ name: this.root.querySelector<HTMLInputElement>('.deck-name-input')!.value, cards: this.deck }),
     );
 
+    this.root.querySelector('#copy-code')!.addEventListener('click', () => this.copyCode());
+    this.root.querySelector('#paste-code')!.addEventListener('click', () => this.pasteCode());
+
+    const tabs = this.root.querySelector('.type-tabs')!;
+    for (const t of [...TYPE_ORDER, 'all'] as Tab[]) {
+      const [emoji, name] = t === 'all' ? ['📚', 'Todas'] : [CARD_TYPES[t].emoji, CARD_TYPES[t].name];
+      const b = document.createElement('button');
+      b.className = 'type-tab';
+      b.dataset.tab = t;
+      b.innerHTML = `<span class="tab-emoji">${emoji}</span><span class="tab-name">${name}</span><span class="tab-count"></span>`;
+      b.addEventListener('click', () => {
+        this.tab = t;
+        // Mudar de aba limpa a pesquisa, senão a aba escolhida não se veria.
+        this.search = '';
+        this.root.querySelector<HTMLInputElement>('.card-search')!.value = '';
+        this.render();
+      });
+      tabs.append(b);
+    }
+
     const groups: Record<FilterGroup, [string, string][]> = {
-      type: TYPE_ORDER.map((t) => [t, `${CARD_TYPES[t].emoji} ${CARD_TYPES[t].name}`]),
       role: ROLES,
       cost: COSTS.map(([v, label]) => [v, label]),
     };
@@ -95,12 +122,35 @@ export class DeckBuilder {
 
   private matches(id: string): boolean {
     const card = getCard(id);
-    const { type, role, cost } = this.filters;
-    if (type !== 'all' && card.type !== type) return false;
+    const { role, cost } = this.filters;
+    const q = normalize(this.search.trim());
+    if (!q && this.tab !== 'all' && card.type !== this.tab) return false;
     if (role !== 'all' && !cardRoles(id).has(role as Role)) return false;
     if (cost !== 'all' && !COSTS.find(([v]) => v === cost)![2](card.cost)) return false;
-    const q = normalize(this.search.trim());
     return !q || normalize(card.name).includes(q) || normalize(card.description).includes(q);
+  }
+
+  private async copyCode() {
+    const btn = this.root.querySelector<HTMLButtonElement>('#copy-code')!;
+    const code = encodeDeck(this.deck);
+    try {
+      await navigator.clipboard.writeText(code);
+      btn.textContent = '✅ Copiado!';
+      setTimeout(() => (btn.textContent = '📋 Copiar código'), 1500);
+    } catch {
+      // Sem acesso à área de transferência: mostra o código para copiar à mão.
+      prompt('Copia este código:', code);
+    }
+  }
+
+  private pasteCode() {
+    const code = prompt('Cola aqui o código do baralho:');
+    if (!code) return;
+    const cards = decodeDeck(code);
+    if (!cards) return alert('Código inválido. Confirma que o copiaste todo.');
+    this.deck = cards;
+    this.render();
+    if (cards.length < CONFIG.deckSize) alert(`O código só tem ${cards.length} cartas: escolhe mais ${CONFIG.deckSize - cards.length}.`);
   }
 
   private close(deck: SavedDeck | null) {
@@ -141,11 +191,31 @@ export class DeckBuilder {
       row.querySelectorAll<HTMLElement>('.chip').forEach((c) => c.classList.toggle('active', c.dataset.filter === active));
     });
 
+    // Na pesquisa nenhuma aba fica ativa: procura-se em todas as classes.
+    const searching = !!this.search.trim();
+    this.root.querySelectorAll<HTMLElement>('.type-tab').forEach((b) => {
+      const t = b.dataset.tab as Tab;
+      b.classList.toggle('active', !searching && t === this.tab);
+      const inDeck = this.deck.filter((id) => t === 'all' || getCard(id).type === t).length;
+      b.querySelector('.tab-count')!.textContent = inDeck ? String(inDeck) : '';
+    });
+
     const pool = this.root.querySelector('.pool')!;
     pool.replaceChildren();
     const shown = sortCards(CARD_IDS).filter((id) => this.matches(id));
     if (!shown.length) pool.innerHTML = '<p class="muted pool-empty">Nenhuma carta com estes filtros.</p>';
+    // Com várias classes à mostra (aba Todas ou pesquisa), separa-as com um título.
+    const grouped = searching || this.tab === 'all';
+    let lastType: CardType | null = null;
     for (const id of shown) {
+      const type = getCard(id).type;
+      if (grouped && type !== lastType) {
+        const h = document.createElement('h3');
+        h.className = 'pool-heading';
+        h.textContent = `${CARD_TYPES[type].emoji} ${CARD_TYPES[type].name}`;
+        pool.append(h);
+        lastType = type;
+      }
       const el = cardEl(id);
       const inDeck = this.deck.includes(id);
       el.classList.toggle('in-deck', inDeck);
