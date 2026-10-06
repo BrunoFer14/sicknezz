@@ -19,6 +19,8 @@ export interface MechanicContext {
   cardType: CardType;
   /** Joga os efeitos de outra carta de `source` em `target`, como se fosse jogada agora (ver Espirro). */
   cast: (cardId: string) => void;
+  /** `target` apanha a doença `cardId` (vinda do adversário, para os tratamentos a curarem). Ver buildUp. */
+  inflict: (cardId: string) => void;
 }
 
 export interface MechanicDef<P> {
@@ -39,7 +41,7 @@ export interface MechanicDef<P> {
   /** Quanto muda o custo das cartas deste tipo para o dono do efeito. */
   costDelta?: (params: P, cardType: CardType) => number;
   /** Chamado quando o dono do efeito joga uma carta (depois de pagar). Pode pôr `effect.ended = true`. */
-  onOwnerPlay?: (params: P, effect: ActiveEffect, cardType: CardType) => void;
+  onOwnerPlay?: (params: P, effect: ActiveEffect, cardType: CardType, play: { state: GameState; owner: PlayerIndex; cardId: string }) => void;
   /** Custo máximo das cartas que o dono do efeito pode jogar enquanto está ativo. */
   maxCost?: (params: P) => number;
   /** Posições da mão (0 = mais à esquerda) que o dono do efeito não pode jogar enquanto está ativo. */
@@ -52,6 +54,8 @@ export interface MechanicDef<P> {
   requires?: (state: GameState, source: PlayerIndex, params: P) => string | null;
   /** O próprio efeito trata das imunidades do alvo (o jogo não as verifica pelo tipo da carta). */
   ownImmunity?: boolean;
+  /** Voltar a jogar a carta não substitui este efeito (ex.: o contador do buildUp). */
+  keepOnReplay?: boolean;
 }
 
 /** A doença mais forte (mais cara) destes tipos que `player` tem ativa e que se pode passar (não permanente). */
@@ -247,6 +251,34 @@ export const MECHANICS = {
     },
   }),
 
+  /** Energia imediata. */
+  gainEnergy: defineMechanic<{ amount: number }>({
+    onApply: ({ state, target }, p) => gainEnergy(state, target, p.amount),
+  }),
+
+  /**
+   * Causa → doença: cada vez que o alvo leva com esta carta, o contador sobe 1 (venha de quem vier).
+   * Ao chegar a `after`, o contador volta a 0 e o alvo apanha a doença `disease`.
+   * Curar o tipo dessa doença (ex.: Fisioterapia para a Obesidade) também repõe o contador.
+   */
+  buildUp: defineMechanic<{ disease: string; after: number }>({
+    duration: () => null,
+    keepOnReplay: true,
+    onApply: (ctx, p, effect) => {
+      const pl = ctx.state.players[ctx.target];
+      // O contador é sempre do próprio alvo (não é uma doença que se cure com Medicação).
+      effect!.source = ctx.target;
+      const counter = pl.effects.find((e) => e !== effect && e.cardId === ctx.cardId && e.mechanic === 'buildUp');
+      if (counter) pl.effects = pl.effects.filter((e) => e !== effect);
+      const c = counter ?? effect!;
+      c.data.count = (c.data.count ?? 0) + 1;
+      if (c.data.count >= p.after) {
+        pl.effects = pl.effects.filter((e) => e !== c);
+        ctx.inflict(p.disease);
+      }
+    },
+  }),
+
   /** Dá energia ao longo do tempo. */
   gainEnergyOverTime: overTime(({ state, target }, n) => gainEnergy(state, target, n)),
 
@@ -256,6 +288,14 @@ export const MECHANICS = {
     costDelta: (p, type) => (p.types.includes(type) ? p.amount : 0),
     onOwnerPlay: (p, e, type) => {
       if (p.types.includes(type)) e.ended = true;
+    },
+  }),
+
+  /** Esforço: cada carta de custo impresso `minCost` ou mais que o alvo jogue tira-lhe `damage` de vida. Sem `duration`, até ser curada. */
+  playPain: defineMechanic<{ minCost: number; damage: number; duration?: number }>({
+    duration: (p) => p.duration ?? null,
+    onOwnerPlay: (p, _e, _type, { state, owner, cardId }) => {
+      if (getCard(cardId).cost >= p.minCost) damage(state, owner, p.damage);
     },
   }),
 
@@ -292,9 +332,12 @@ export const MECHANICS = {
   cleanse: defineMechanic<{ types?: CardType[] }>({
     onApply: ({ state, target }, p) => {
       const pl = state.players[target];
-      pl.effects = pl.effects.filter(
-        (e) => e.source === target || getCard(e.cardId).permanent || (p.types !== undefined && !p.types.includes(e.cardType)),
-      );
+      const covers = (type: CardType) => p.types === undefined || p.types.includes(type);
+      pl.effects = pl.effects.filter((e) => {
+        // Contadores do buildUp: curar o tipo da doença a que levam também os repõe.
+        if (e.mechanic === 'buildUp') return !covers(getCard(e.params.disease).type);
+        return e.source === target || getCard(e.cardId).permanent || !covers(e.cardType);
+      });
     },
   }),
 

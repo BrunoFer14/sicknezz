@@ -126,7 +126,7 @@ export function playCard(state: GameState, player: PlayerIndex, handIndex: numbe
   p.played[cardId] = (p.played[cardId] ?? 0) + 1;
 
   // Efeitos no próprio jogador que reagem às cartas que ele joga (ex.: a Alergia desaparece com um tratamento).
-  for (const e of [...p.effects]) getMechanic(e.mechanic).onOwnerPlay?.(e.params, e, card.type);
+  for (const e of [...p.effects]) getMechanic(e.mechanic).onOwnerPlay?.(e.params, e, card.type, { state, owner: player, cardId });
   p.effects = p.effects.filter((e) => !e.ended);
 
   state.events.push({ type: 'played', player, cardId, target: resolveTarget(player, card.target, side) });
@@ -143,7 +143,7 @@ export function playCard(state: GameState, player: PlayerIndex, handIndex: numbe
     // Nada acumula: jogar outra vez a mesma carta substitui (e reinicia) a anterior.
     if (!replaced.has(target)) {
       const t = state.players[target];
-      t.effects = t.effects.filter((e) => !(e.cardId === cardId && e.source === player));
+      t.effects = t.effects.filter((e) => !(e.cardId === cardId && e.source === player && !getMechanic(e.mechanic).keepOnReplay));
       replaced.add(target);
     }
     applyEffect(state, player, target, cardId, card, spec, playId);
@@ -160,14 +160,17 @@ export function playCard(state: GameState, player: PlayerIndex, handIndex: numbe
   return { ok: true };
 }
 
-/** Joga os efeitos de `cardId` de `source` em `target` como uma jogada nova (duração completa). Usado pelo Espirro. */
-function castCard(state: GameState, source: PlayerIndex, target: PlayerIndex, cardId: string) {
+/**
+ * Joga os efeitos de `cardId` de `source` em `target` como uma jogada nova (duração completa).
+ * Usado pelo Espirro e, com `from`, pelas doenças apanhadas por acumulação (buildUp).
+ */
+function castCard(state: GameState, source: PlayerIndex, target: PlayerIndex, cardId: string, from?: string) {
   const card = getCard(cardId);
   if (isImmune(state.players[target], card.type)) {
     state.events.push({ type: 'blocked', player: target, cardId });
     return;
   }
-  state.events.push({ type: 'spread', player: source, cardId });
+  state.events.push(from ? { type: 'gained', player: target, cardId, from } : { type: 'spread', player: source, cardId });
   const t = state.players[target];
   t.effects = t.effects.filter((e) => !(e.cardId === cardId && e.source === source));
   const playId = state.nextUid++;
@@ -185,7 +188,7 @@ function isImmune(p: PlayerState, type: CardType): boolean {
 
 function applyEffect(state: GameState, source: PlayerIndex, target: PlayerIndex, cardId: string, card: CardDef, spec: EffectSpec, playId: number) {
   const mech = getMechanic(spec.mechanic);
-  const ctx: MechanicContext = { state, target, source, cardId, cardType: card.type, cast: (id) => castCard(state, source, target, id) };
+  const ctx: MechanicContext = { state, target, source, cardId, cardType: card.type, cast: (id) => castCard(state, source, target, id), inflict: (id) => castCard(state, other(target), target, id, cardId) };
 
   if (!mech.duration) {
     mech.onApply?.(ctx, spec.params, null);
@@ -223,7 +226,7 @@ export function tick(state: GameState, dt: number) {
     for (const e of [...p.effects]) {
       if (!p.effects.includes(e)) continue; // removido por outro efeito neste tick
       const mech = getMechanic(e.mechanic);
-      const ctx: MechanicContext = { state, target, source: e.source, cardId: e.cardId, cardType: e.cardType, cast: (id) => castCard(state, e.source, target, id) };
+      const ctx: MechanicContext = { state, target, source: e.source, cardId: e.cardId, cardType: e.cardType, cast: (id) => castCard(state, e.source, target, id), inflict: (id) => castCard(state, other(target), target, id, e.cardId) };
       e.elapsed += dt;
       mech.onTick?.(ctx, e.params, e, dt);
       if (e.ended || (e.duration !== null && e.elapsed >= e.duration)) {

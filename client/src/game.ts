@@ -10,6 +10,7 @@ interface Hud {
   name: HTMLElement;
   hpFill: HTMLElement;
   hpText: HTMLElement;
+  hpLost: HTMLElement;
   energyCells: HTMLElement;
   energyText: HTMLElement;
   regen: HTMLElement;
@@ -24,7 +25,7 @@ interface Board {
 const HUD_HTML = `
   <div class="hud">
     <div class="name"></div>
-    <div class="hp"><div class="hp-fill"></div><span class="hp-text"></span></div>
+    <div class="hp"><div class="hp-fill"></div><div class="hp-lost"></div><span class="hp-text"></span></div>
     <div class="energy-row">
       <div class="energy-cells"></div>
       <span class="energy-text"></span>
@@ -142,6 +143,7 @@ export class GameScreen {
       name: q('.name', side),
       hpFill: q('.hp-fill', side),
       hpText: q('.hp-text', side),
+      hpLost: q('.hp-lost', side),
       energyCells: q('.energy-cells', side),
       energyText: q('.energy-text', side),
       regen: q('.regen', side),
@@ -263,10 +265,13 @@ export class GameScreen {
 
   private updateHud(hud: Hud, p: PlayerView) {
     hud.name.textContent = p.name;
+    // A barra mede-se pela vida máxima normal: a vida máxima perdida (Hipertensão) aparece às riscas no fim.
     const hpPct = Math.max(0, p.hp / p.stats.maxHp);
-    hud.hpFill.style.width = `${hpPct * 100}%`;
+    const lost = Math.max(0, 1 - p.stats.maxHp / p.base.maxHp);
+    hud.hpFill.style.width = `${Math.min(1, Math.max(0, p.hp / p.base.maxHp)) * 100}%`;
     hud.hpFill.classList.toggle('low', hpPct < 0.3);
-    hud.hpText.textContent = `${Math.ceil(p.hp)} / ${p.stats.maxHp}`;
+    hud.hpLost.style.width = `${lost * 100}%`;
+    hud.hpText.innerHTML = `${Math.ceil(p.hp)} / <span class="${lost > 0 ? 'hp-max-down' : ''}">${p.stats.maxHp}</span>`;
 
     const cellCount = Math.max(p.base.maxEnergy, p.stats.maxEnergy);
     if (hud.energyCells.children.length !== cellCount) {
@@ -451,12 +456,19 @@ export class GameScreen {
         el.append(cardEl(e.cardId));
         el.insertAdjacentHTML(
           'beforeend',
-          e.duration === null
+          e.buildUp
+            ? '<div class="e-time buildup"></div>'
+            : e.duration === null
             ? `<div class="e-time perm">${getCard(e.cardId).permanent ? 'Permanente' : 'Até ser curada'}</div>`
             : '<div class="e-timer"><div class="e-fill"></div></div><div class="e-time"></div>',
         );
         board.effects.append(el);
         board.els.set(e.id, el);
+      }
+      if (e.buildUp) {
+        const { count, after, disease } = e.buildUp;
+        const d = getCard(disease);
+        (el.querySelector('.e-time') as HTMLElement).textContent = `${count}/${after} → ${d.emoji} ${d.name}`;
       }
       if (e.remaining !== null && e.duration) {
         (el.querySelector('.e-fill') as HTMLElement).style.width = `${(e.remaining / e.duration) * 100}%`;
@@ -519,6 +531,13 @@ export class GameScreen {
         const name = escapeHtml(getCard(e.cardId).name);
         this.float(mine(e.player) ? this.hud.me : this.hud.opp, 'Contágio!', 'info');
         this.log(view, e.cardId, mine(e.player) ? `<b>${name}</b> contagiou-te a ti também!` : `<b>${name}</b> contagiou o adversário também!`, 'info');
+        break;
+      }
+      case 'gained': {
+        const name = escapeHtml(getCard(e.cardId).name);
+        const from = escapeHtml(getCard(e.from).name);
+        this.float(mine(e.player) ? this.hud.me : this.hud.opp, `${getCard(e.cardId).name}!`, 'info');
+        this.log(view, e.cardId, mine(e.player) ? `Demasiado <b>${from}</b>: ficaste com <b>${name}</b>!` : `Demasiado <b>${from}</b>: o adversário ficou com <b>${name}</b>!`, 'info');
         break;
       }
       case 'surrender': {

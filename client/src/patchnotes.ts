@@ -16,6 +16,36 @@ const change = (name: string, before: string, after: string): NoteItem => ({ nam
 
 export const PATCH_NOTES: PatchNote[] = [
   {
+    version: '0.12',
+    date: '06/10/2026',
+    title: 'Hambúrguer',
+    sections: [
+      {
+        title: '🃏 Cartas novas',
+        items: [
+          '🍔 Hambúrguer (Física, 2): quem o come ganha 4 de energia e +1 🍔. Ao 3.º 🍔 fica com Obesidade. Larga-o na tua área para comeres, ou na do adversário para o alimentares — dar-lhe o último hambúrguer deixa-o obeso.',
+          'O contador 🍔 vê-se nos efeitos de cada jogador (1/3, 2/3…). A Fisioterapia e o Hospital curam a Obesidade e também repõem o contador.',
+          '🏋️ Hérnia (Estado, 3): até ser curada, cada carta de custo 4 ou mais que o adversário jogue tira-lhe 3 de vida. Fazer força demais dói.',
+        ],
+      },
+      {
+        title: '❤️ Barra de vida',
+        items: ['Quando a vida máxima desce (Hipertensão), a parte perdida aparece às riscas no fim da barra e o máximo fica a vermelho.'],
+      },
+      {
+        title: '⚖️ Alterações',
+        items: [
+          change('Obesidade', 'carta jogável (4): energia máxima do adversário −2', 'já não entra nos baralhos: só se apanha comendo Hambúrgueres'),
+          'Baralhos guardados com a Obesidade ficam incompletos: troca-a por outra carta (o Hambúrguer, por exemplo).',
+        ],
+      },
+      {
+        title: '🐛 Correções',
+        items: ['Construtor de baralhos: a barra das abas desaparecia na aba "Todas".'],
+      },
+    ],
+  },
+  {
     version: '0.11',
     date: '06/10/2026',
     title: 'Abas no baralho',

@@ -76,6 +76,10 @@ export const LORE: Partial<Record<CardId, CardLore>> = {
     what: 'Doença crónica em que as vias respiratórias inflamam e estreitam, causando falta de ar, pieira e tosse. As crises podem ser provocadas por alergias, exercício ou frio. No jogo, "tira o fôlego" à tua energia.',
     history: 'O nome vem do grego "asthma", que quer dizer arquejar. Os inaladores de bolso, que tornaram o tratamento muito mais fácil, surgiram em 1956.',
   },
+  hamburguer: {
+    what: 'Comida rápida com muitas calorias, gordura e sal. Dá energia depressa, mas comer assim todos os dias é um dos principais caminhos para a obesidade — por isso, no jogo, um hambúrguer não faz mal, três já fazem.',
+    history: 'O hambúrguer no pão popularizou-se nos Estados Unidos no início do século XX. A White Castle, aberta em 1921, é muitas vezes apontada como a primeira cadeia de fast food do mundo.',
+  },
   obesidade: {
     what: 'Acumulação excessiva de gordura no corpo, que aumenta o risco de diabetes, doenças cardíacas e alguns cancros. É medida pelo índice de massa corporal (IMC): 30 ou mais é considerado obesidade.',
     history: 'O IMC foi criado no século XIX pelo matemático belga Adolphe Quetelet. Segundo a OMS, a obesidade em adultos mais do que duplicou no mundo desde 1990.',
@@ -105,6 +109,10 @@ export const LORE: Partial<Record<CardId, CardLore>> = {
     history: 'A palavra "alergia" foi criada em 1906 pelo pediatra austríaco Clemens von Pirquet. A "febre dos fenos" (alergia ao pólen) tinha sido descrita em 1819 pelo médico inglês John Bostock, que sofria dela.',
   },
 
+  hernia: {
+    what: 'Acontece quando um órgão ou um disco da coluna sai do sítio e empurra os tecidos à volta. A hérnia discal, na coluna, é muitas vezes causada por levantar pesos com mau jeito — por isso, no jogo, cada esforço grande dói.',
+    history: 'A cirurgia moderna da hérnia inguinal foi criada em 1887 pelo cirurgião italiano Edoardo Bassini, e a técnica dele continuou a ser usada durante quase um século.',
+  },
   fadiga: {
     what: 'Cansaço intenso e persistente, que não passa com uma noite de sono. Pode vir de falta de descanso, de stress ou de uma doença, e faz com que qualquer tarefa pareça custar mais — no jogo, todas as cartas custam mais energia.',
     history: 'A "síndrome de fadiga crónica" só foi reconhecida como doença nos anos 1980. Durante muito tempo, quem sofria dela era acusado de preguiça, o que hoje se sabe estar errado.',

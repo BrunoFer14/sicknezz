@@ -20,7 +20,7 @@ export const BOT_LEVELS: Record<BotLevel, { name: string; reaction: [number, num
 /** Baralhos que a IA usa (um ao calhas por partida). */
 const BOT_DECKS: string[][] = [
   ['constipacao', 'gripe', 'covid', 'pneumonia', 'sepsis', 'salmonela', 'enxaqueca', 'vacina', 'hospital', 'vitaminas'],
-  ['sedentarismo', 'obesidade', 'hipertensao', 'diabetes', 'fratura', 'gripe', 'tuberculose', 'fisioterapia', 'vitaminas', 'medicacao'],
+  ['sedentarismo', 'hamburguer', 'hipertensao', 'diabetes', 'fratura', 'gripe', 'tuberculose', 'fisioterapia', 'vitaminas', 'medicacao'],
   ['ansiedade', 'enxaqueca', 'burnout', 'paranoia', 'amnesia', 'covid', 'herpes', 'terapia', 'cafe', 'vitaminas'],
   ['constipacao', 'gripe', 'herpes', 'ebola', 'sida', 'avc', 'alergia', 'vacina', 'hospital', 'cafe'],
 ];
@@ -100,6 +100,13 @@ export class Bot {
   private pickSide(state: GameState, card: CardDef): Side {
     // Alzheimer: troca a própria mão se estiver má (cartas que não dá para jogar), senão estraga a do adversário.
     if (card.effects.some((e) => e.mechanic === 'shuffleHand')) return this.handIsBad(state) ? 'self' : 'opponent';
+    // Hambúrguer: dá o último ao adversário para o deixar doente; senão come-o (se não for ficar doente com ele).
+    const build = card.effects.find((e) => e.mechanic === 'buildUp');
+    if (build && build.mechanic === 'buildUp') {
+      const opp = other(this.me);
+      if (buildCount(state.players[opp], card.name) + 1 >= build.params.after) return 'opponent';
+      return 'self';
+    }
     return 'opponent';
   }
 
@@ -170,6 +177,17 @@ export class Bot {
         case 'gainEnergyOverTime':
           value += me.energy < 6 ? e.params.amount * 2.5 : 1;
           break;
+        case 'gainEnergy':
+          // Dar energia ao adversário é mau (a não ser que já esteja cheio).
+          if (side === 'self') value += me.energy < 6 ? e.params.amount * 2.5 : 1;
+          else value -= Math.min(e.params.amount, computeStats(opp).maxEnergy - opp.energy) * 1.5;
+          break;
+        case 'buildUp': {
+          // Vale a doença que dá ao chegar ao fim do contador: boa no adversário, má em mim.
+          const triggers = buildCount(target, card.name) + 1 >= e.params.after;
+          if (triggers) value += hostile ? getCard(e.params.disease).cost * 4 : -getCard(e.params.disease).cost * 4;
+          break;
+        }
         case 'statModifier': {
           const { stat, value: v } = e.params;
           const dur = e.params.duration ?? 40;
@@ -198,6 +216,9 @@ export class Bot {
         case 'costUp':
           value += opp.energy >= 4 ? 7 : 4;
           break;
+        case 'playPain':
+          value += 6;
+          break;
         case 'forbidCards':
           value += opp.hand.some((id) => e.params.cards.includes(id)) ? 3 : 0.5;
           break;
@@ -219,6 +240,8 @@ export class Bot {
       }
     }
     if (alreadyActive) value *= 0.15;
+    // Hérnia em mim: cartas pesadas custam vida.
+    for (const x of me.effects) if (x.mechanic === 'playPain' && card.cost >= x.params.minCost) value -= x.params.damage * 1.5;
     if (card.contagion) value *= 1 - card.contagion * 0.8;
     return value;
   }
@@ -230,6 +253,11 @@ export class Bot {
     const real = amount * mult;
     return real >= opp.hp ? real * 3 : real;
   }
+}
+
+/** Quantas vezes o jogador já levou com esta carta de acumulação (ex.: Hambúrgueres até à Obesidade). */
+function buildCount(p: PlayerState, cardName: string): number {
+  return p.effects.find((e) => e.mechanic === 'buildUp' && getCard(e.cardId).name === cardName)?.data.count ?? 0;
 }
 
 function diseases(p: PlayerState, from: PlayerIndex, types?: CardType[]): number {

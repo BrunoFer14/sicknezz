@@ -72,7 +72,9 @@ export type GameEvent =
   /** `player` espirrou: passou uma cópia de `cardId` ao adversário. */
   | { type: 'spread'; player: PlayerIndex; cardId: string }
   /** A doença que `player` jogou também o infetou a ele. */
-  | { type: 'contagion'; player: PlayerIndex; cardId: string };
+  | { type: 'contagion'; player: PlayerIndex; cardId: string }
+  /** `player` apanhou a doença `cardId` por acumulação (ex.: Obesidade ao 3.º Hambúrguer, `from`). */
+  | { type: 'gained'; player: PlayerIndex; cardId: string; from: string };
 
 export interface GameState {
   /** Segundos de jogo. Negativo durante a contagem inicial. */

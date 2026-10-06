@@ -62,6 +62,8 @@ export interface EffectView {
   remaining: number | null;
   duration: number | null;
   hostile: boolean;
+  /** Contador de uma carta que acumula até dar uma doença (ex.: 2 de 3 Hambúrgueres até à Obesidade). */
+  buildUp?: { count: number; after: number; disease: string };
 }
 
 export interface PlayerView {
@@ -179,7 +181,9 @@ function playerView(p: PlayerState, owner: PlayerIndex): PlayerView {
     const remaining = e.duration === null ? null : Math.max(0, e.duration - e.elapsed);
     const prev = plays.get(e.playId);
     if (!prev) {
-      plays.set(e.playId, { id: e.playId, cardId: e.cardId, remaining, duration: e.duration, hostile: e.source !== owner });
+      const view: EffectView = { id: e.playId, cardId: e.cardId, remaining, duration: e.duration, hostile: e.source !== owner };
+      if (e.mechanic === 'buildUp') view.buildUp = { count: e.data.count ?? 0, after: e.params.after, disease: e.params.disease };
+      plays.set(e.playId, view);
     } else if (prev.remaining !== null && (remaining === null || remaining > prev.remaining)) {
       // Mostra o efeito que dura mais tempo.
       prev.remaining = remaining;

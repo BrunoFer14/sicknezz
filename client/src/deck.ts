@@ -1,4 +1,4 @@
-import { CARDS, DEFAULT_DECK, validateDeck } from '../../shared/cards';
+import { CARDS, DEFAULT_DECK, isCollectible, validateDeck } from '../../shared/cards';
 import { CONFIG } from '../../shared/engine/config';
 
 /** Chave antiga (só um baralho); é migrada para o primeiro espaço. */
@@ -24,7 +24,7 @@ interface DeckStore {
 function readSavedDeck(d: unknown): SavedDeck | null {
   const deck = d as SavedDeck | null;
   if (!deck || typeof deck.name !== 'string' || !Array.isArray(deck.cards)) return null;
-  const cards = [...new Set(deck.cards)].filter((id) => typeof id === 'string' && id in CARDS);
+  const cards = [...new Set(deck.cards)].filter((id) => typeof id === 'string' && isCollectible(id));
   return cards.length ? { name: deck.name, cards } : null;
 }
 
@@ -152,7 +152,7 @@ export function decodeDeck(code: string): string[] | null {
   const cards: string[] = [];
   for (let i = 0; i < raw.length; i += 3) {
     const id = BY_CODE.get(raw.slice(i, i + 3));
-    if (!id) return null;
+    if (!id || !isCollectible(id)) return null;
     if (!cards.includes(id)) cards.push(id);
   }
   return cards.length <= CONFIG.deckSize ? cards : null;

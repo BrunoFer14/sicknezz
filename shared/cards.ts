@@ -18,6 +18,8 @@ export interface CardDef {
   contagion?: number;
   /** Sintomas: só se pode jogar se o alvo já tiver uma doença ativa destes tipos. */
   requires?: CardType[];
+  /** false: não entra nos baralhos, só aparece em jogo através de outra carta (ex.: Obesidade pelo Hambúrguer). */
+  collectible?: false;
   effects: EffectSpec[];
 }
 
@@ -199,9 +201,22 @@ export const CARDS = defineCards({
     emoji: '🍔',
     type: 'fisica',
     cost: 4,
-    description: 'A energia máxima do adversário desce 2 (de 10 para 8) até ser curada.',
+    description: 'Só se apanha comendo Hambúrgueres. A energia máxima desce 2 (de 10 para 8) até ser curada.',
     target: 'opponent',
+    collectible: false,
     effects: [{ mechanic: 'statModifier', params: { stat: 'maxEnergy', op: 'add', value: -2 } }],
+  },
+  hamburguer: {
+    name: 'Hambúrguer',
+    emoji: '🍔',
+    type: 'fisica',
+    cost: 2,
+    description: 'Quem o come ganha 4 de energia e +1 🍔. Ao 3.º 🍔 fica com Obesidade. Larga na tua área para comeres, ou na do adversário para o alimentares.',
+    target: 'any',
+    effects: [
+      { mechanic: 'gainEnergy', params: { amount: 4 } },
+      { mechanic: 'buildUp', params: { disease: 'obesidade', after: 3 } },
+    ],
   },
   hipertensao: {
     name: 'Hipertensão',
@@ -260,6 +275,15 @@ export const CARDS = defineCards({
     effects: [{ mechanic: 'costIncrease', params: { types: ['tratamento'], amount: 2 } }],
   },
 
+  hernia: {
+    name: 'Hérnia',
+    emoji: '🏋️',
+    type: 'estado',
+    cost: 3,
+    description: 'Até ser curada, cada carta de custo 4 ou mais que o adversário jogue tira-lhe 3 de vida.',
+    target: 'opponent',
+    effects: [{ mechanic: 'playPain', params: { minCost: 4, damage: 3 } }],
+  },
   fadiga: {
     name: 'Fadiga',
     emoji: '😪',
@@ -486,11 +510,14 @@ export const CARDS = defineCards({
 });
 
 export type CardId = keyof typeof CARDS;
-export const CARD_IDS = Object.keys(CARDS) as CardId[];
+/** Cartas que se podem pôr nos baralhos (sem as que só aparecem através de outras, como a Obesidade). */
+export const CARD_IDS = (Object.keys(CARDS) as CardId[]).filter((id) => (CARDS[id] as CardDef).collectible !== false);
+
+export const isCollectible = (id: string): boolean => (CARD_IDS as string[]).includes(id);
 
 export const DEFAULT_DECK: CardId[] = [
   'constipacao', 'gripe', 'covid', 'pneumonia', 'salmonela',
-  'obesidade', 'asma', 'enxaqueca', 'vacina', 'fisioterapia',
+  'hamburguer', 'asma', 'enxaqueca', 'vacina', 'fisioterapia',
 ];
 
 export function getCard(id: string): CardDef {
@@ -502,7 +529,7 @@ export function getCard(id: string): CardDef {
 /** Devolve uma mensagem de erro, ou null se o baralho for válido. */
 export function validateDeck(deck: unknown): string | null {
   if (!Array.isArray(deck) || deck.length !== CONFIG.deckSize) return `O baralho tem de ter ${CONFIG.deckSize} cartas.`;
-  if (!deck.every((id) => typeof id === 'string' && id in CARDS)) return 'O baralho tem cartas desconhecidas.';
+  if (!deck.every((id) => typeof id === 'string' && isCollectible(id))) return 'O baralho tem cartas desconhecidas.';
   if (new Set(deck).size !== deck.length) return 'O baralho não pode ter cartas repetidas.';
   return null;
 }

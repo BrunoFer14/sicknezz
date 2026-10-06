@@ -158,6 +158,8 @@ input:focus { outline: none; border-color: var(--toxic); }
   display: flex;
   gap: 4px;
   overflow-x: auto;
+  /* Sem isto, com muitas cartas (aba Todas) a coluna do construtor encolhia a barra até desaparecer. */
+  flex-shrink: 0;
   border-bottom: 2px solid var(--line);
   scrollbar-width: thin;
 }
@@ -278,6 +280,8 @@ input:focus { outline: none; border-color: var(--toxic); }
 .hud .name { grid-area: name; font-weight: 700; max-width: 30vw; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .hp { grid-area: hp; position: relative; height: 22px; background: #2a1517; border-radius: 6px; overflow: hidden; }
 .hp-fill { height: 100%; background: linear-gradient(90deg, #36b37e, var(--heal)); transition: width .2s; }
+.hp-lost { position: absolute; top: 0; right: 0; height: 100%; background: repeating-linear-gradient(45deg, #3a1d1f, #3a1d1f 4px, #1a0c0d 4px, #1a0c0d 8px); transition: width .2s; }
+.hp-max-down { color: var(--blood); }
 .hp-fill.low { background: linear-gradient(90deg, #a8242a, var(--blood)); }
 .hp-text { position: absolute; inset: 0; display: grid; place-items: center; font-size: 13px; font-weight: 700; text-shadow: 0 1px 2px #000; }
 .energy-row { grid-area: energy; display: flex; align-items: center; gap: 8px; }
@@ -332,6 +336,7 @@ input:focus { outline: none; border-color: var(--toxic); }
 .effect-card.leaving { opacity: 0; transform: scale(.8); transition: all .25s; }
 .e-timer { height: 5px; background: var(--bg); border-radius: 3px; overflow: hidden; flex: none; }
 .e-time { font-size: 11px; color: var(--muted); text-align: center; font-variant-numeric: tabular-nums; flex: none; }
+.e-time.buildup { color: var(--toxic); font-size: 10px; font-weight: 700; }
 .e-time.perm { color: var(--blood); text-transform: uppercase; letter-spacing: .05em; font-size: 10px; }
 .effect {
   display: flex;
