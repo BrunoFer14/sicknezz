@@ -16,6 +16,36 @@ const change = (name: string, before: string, after: string): NoteItem => ({ nam
 
 export const PATCH_NOTES: PatchNote[] = [
   {
+    version: '0.15',
+    date: '07/10/2026',
+    title: 'Controlo com dentes',
+    sections: [
+      {
+        title: '🔻 Dano a mais',
+        items: [
+          'A Gripe, a Covid, a Tuberculose e o Ébola ganhavam demasiadas partidas.',
+          change('Gripe', '9 de vida em 6s', '8 de vida em 6s'),
+          change('Covid', '26 de vida em 12s', '24 de vida em 12s'),
+          change('Tuberculose', '16 de vida em 16s', '13 de vida em 16s (o abrandamento da energia fica igual)'),
+          change('Ébola', '10% de hipótese por segundo de passar sozinho', '12%'),
+        ],
+      },
+      {
+        title: '🔺 Controlo e energia',
+        items: [
+          'As cartas de controlo atrasavam o adversário mas não o matavam, por isso perdiam quase sempre para baralhos de dano. Agora algumas também tiram vida, e outras ficaram mais baratas.',
+          change('AVC', 'só bloqueia 2 cartas durante 5s', 'também tira 4 de vida'),
+          change('Fratura', 'só limita o custo durante 10s', 'também tira 5 de vida'),
+          change('Paranoia', 'só esconde as doenças durante 10s', 'também tira 4 de vida'),
+          change('Depressão', 'custo 6', 'custo 3'),
+          change('Fadiga', 'custo 4', 'custo 3'),
+          change('Burnout', 'custo 3', 'custo 2'),
+          change('Quarentena', 'custo 3', 'custo 2'),
+        ],
+      },
+    ],
+  },
+  {
     version: '0.14',
     date: '07/10/2026',
     title: 'Sono e mutações',
