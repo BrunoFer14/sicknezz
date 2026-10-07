@@ -17,6 +17,8 @@ export interface MechanicContext {
   cardId: string;
   /** Tipo da carta que criou o efeito. */
   cardType: CardType;
+  /** Jogada que criou o efeito. */
+  playId: number;
   /** Joga os efeitos de outra carta de `source` em `target`, como se fosse jogada agora (ver Espirro). */
   cast: (cardId: string) => void;
   /** `target` apanha a doença `cardId` (vinda do adversário, para os tratamentos a curarem). Ver buildUp. */
@@ -178,15 +180,15 @@ export const MECHANICS = {
 
   /** Retira energia imediatamente. */
   drainEnergy: defineMechanic<{ amount: number }>({
-    onApply: ({ state, target }, p) => drainEnergy(state, target, p.amount),
+    onApply: ({ state, target, playId }, p) => drainEnergy(state, target, p.amount, playId),
   }),
 
   /** Retira energia ao longo do tempo. */
-  drainEnergyOverTime: overTime(({ state, target }, n) => drainEnergy(state, target, n)),
+  drainEnergyOverTime: overTime(({ state, target, playId }, n) => drainEnergy(state, target, n, playId)),
 
   /** Retira a energia acima de `keep`. */
   drainEnergyAbove: defineMechanic<{ keep: number }>({
-    onApply: ({ state, target }, p) => drainEnergy(state, target, state.players[target].energy - p.keep),
+    onApply: ({ state, target, playId }, p) => drainEnergy(state, target, state.players[target].energy - p.keep, playId),
   }),
 
   /** A carta mais cara da mão do alvo vai para o fim da fila e entra a próxima. */
@@ -249,6 +251,11 @@ export const MECHANICS = {
       const times = state.players[source].played[cardId] ?? 1;
       if (times > 1) damage(state, source, p.penalty * 2 ** (times - 2));
     },
+  }),
+
+  /** Resiliência a drenos de energia (criada pelo próprio jogo em drainEnergy, ver CONFIG.resilience). */
+  resilience: defineMechanic<Record<string, never>>({
+    duration: () => CONFIG.resilience.duration,
   }),
 
   /** Energia imediata. */

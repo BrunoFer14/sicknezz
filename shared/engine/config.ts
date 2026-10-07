@@ -28,6 +28,11 @@ export const CONFIG = {
    */
   minEnergyRegenFactor: 0.55, // a regeneração nunca desce abaixo de 55% da normal
   minMaxEnergy: 6, // a energia máxima nunca desce abaixo de 6
+  /**
+   * Resiliência: depois de perder energia por um dreno, durante `duration` segundos os drenos de outras jogadas
+   * tiram menos (metade, depois um quarto). Impede que uma cadeia de drenos prenda o adversário sem energia.
+   */
+  resilience: { duration: 8, factors: [1, 0.5, 0.25] },
   energyPhases: [
     { at: 0, mult: 0.75 }, //  0:00  1 a cada 2s (arranque um pouco mais lento)
     { at: 60, mult: 1 }, //    1:00  1 a cada 1,5s

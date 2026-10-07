@@ -3,6 +3,7 @@
 import { getCard, validateDeck, type CardDef } from '../shared/cards';
 import { cardCost, lockedSlots, maxPlayableCost, other, unmetRequirement } from '../shared/engine/game';
 import { spreadable } from '../shared/engine/mechanics';
+import { drainFactor } from '../shared/engine/actions';
 import { computeStats } from '../shared/engine/stats';
 import type { CardType, GameState, PlayerIndex, PlayerState, Side } from '../shared/engine/types';
 
@@ -160,13 +161,13 @@ export class Bot {
           if (!me.effects.some((x) => e.params.types.every((t) => x.blocks.includes(t)))) value += opp.energy >= 4 ? 4 : 1;
           break;
         case 'drainEnergy':
-          value += Math.min(e.params.amount, opp.energy) * 3;
+          value += Math.min(e.params.amount * drainFactor(opp), opp.energy) * 3;
           break;
         case 'drainEnergyOverTime':
-          value += e.params.amount * 2;
+          value += e.params.amount * drainFactor(opp) * 2;
           break;
         case 'drainEnergyAbove':
-          value += Math.max(0, opp.energy - e.params.keep) * 3;
+          value += Math.max(0, opp.energy - e.params.keep) * drainFactor(opp) * 3;
           break;
         case 'energyBurst': {
           // Bebida Energética: vale a energia, menos a vida que vai custar (cada vez mais).

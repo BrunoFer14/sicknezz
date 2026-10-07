@@ -6,7 +6,13 @@ const OP_ORDER = ['add', 'mul', 'set'] as const;
 /** Stats finais de um jogador depois de aplicar todos os efeitos ativos. */
 export function computeStats(player: PlayerState): Stats {
   const stats = { ...player.base };
-  const mods = player.effects.flatMap((e) => e.modifiers);
+  let mods = player.effects.flatMap((e) => e.modifiers);
+  // Abrandamentos da energia não acumulam: só conta o mais forte (Insónia + Asma = só a Insónia).
+  const slows = mods.filter((m) => m.stat === 'energyRegen' && m.op === 'mul' && m.value < 1);
+  if (slows.length > 1) {
+    const strongest = slows.reduce((a, b) => (b.value < a.value ? b : a));
+    mods = mods.filter((m) => !slows.includes(m) || m === strongest);
+  }
   for (const op of OP_ORDER) {
     for (const m of mods) {
       if (m.op !== op) continue;

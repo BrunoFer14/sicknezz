@@ -16,6 +16,29 @@ const change = (name: string, before: string, after: string): NoteItem => ({ nam
 
 export const PATCH_NOTES: PatchNote[] = [
   {
+    version: '0.13',
+    date: '07/10/2026',
+    title: 'Sem prisões de energia',
+    sections: [
+      {
+        title: '🧘 Resiliência (regra nova)',
+        items: [
+          'Depois de perderes energia por um dreno (Enxaqueca, Ansiedade, Burnout…), ficas 8s com Resiliência: o dreno seguinte só te tira metade, e o outro a seguir um quarto. Vê-se nos teus efeitos.',
+          'Um dreno de vez em quando continua a doer; uma cadeia de drenos já não te deixa preso sem energia o resto do jogo.',
+        ],
+      },
+      {
+        title: '⚖️ Equilíbrio',
+        items: [
+          'Os abrandamentos da energia já não acumulam: com Insónia, Asma, Sedentarismo ou Depressão ao mesmo tempo, só conta o mais forte.',
+          change('Enxaqueca', 'tira 3 de energia', 'tira 2 de energia'),
+          change('Ansiedade', 'tira 3 de energia em 10s', 'tira 2 de energia em 10s'),
+          change('Burnout', 'perdes a energia acima de 4', 'perdes a energia acima de 5'),
+        ],
+      },
+    ],
+  },
+  {
     version: '0.12',
     date: '06/10/2026',
     title: 'Hambúrguer',

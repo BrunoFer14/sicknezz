@@ -188,7 +188,7 @@ function isImmune(p: PlayerState, type: CardType): boolean {
 
 function applyEffect(state: GameState, source: PlayerIndex, target: PlayerIndex, cardId: string, card: CardDef, spec: EffectSpec, playId: number) {
   const mech = getMechanic(spec.mechanic);
-  const ctx: MechanicContext = { state, target, source, cardId, cardType: card.type, cast: (id) => castCard(state, source, target, id), inflict: (id) => castCard(state, other(target), target, id, cardId) };
+  const ctx: MechanicContext = { state, target, source, cardId, cardType: card.type, playId, cast: (id) => castCard(state, source, target, id), inflict: (id) => castCard(state, other(target), target, id, cardId) };
 
   if (!mech.duration) {
     mech.onApply?.(ctx, spec.params, null);
@@ -226,7 +226,7 @@ export function tick(state: GameState, dt: number) {
     for (const e of [...p.effects]) {
       if (!p.effects.includes(e)) continue; // removido por outro efeito neste tick
       const mech = getMechanic(e.mechanic);
-      const ctx: MechanicContext = { state, target, source: e.source, cardId: e.cardId, cardType: e.cardType, cast: (id) => castCard(state, e.source, target, id), inflict: (id) => castCard(state, other(target), target, id, e.cardId) };
+      const ctx: MechanicContext = { state, target, source: e.source, cardId: e.cardId, cardType: e.cardType, playId: e.playId, cast: (id) => castCard(state, e.source, target, id), inflict: (id) => castCard(state, other(target), target, id, e.cardId) };
       e.elapsed += dt;
       mech.onTick?.(ctx, e.params, e, dt);
       if (e.ended || (e.duration !== null && e.elapsed >= e.duration)) {
