@@ -58,6 +58,8 @@ export interface MechanicDef<P> {
   ownImmunity?: boolean;
   /** Voltar a jogar a carta não substitui este efeito (ex.: o contador do buildUp). */
   keepOnReplay?: boolean;
+  /** A próxima carta deste tipo que o dono jogar não tem efeito (gasta a energia e a carta, e acaba com este efeito). */
+  cancels?: (params: P, cardType: CardType) => boolean;
 }
 
 /** A doença mais forte (mais cara) destes tipos que `player` tem ativa e que se pode passar (não permanente). */
@@ -70,6 +72,20 @@ export function spreadable(state: GameState, player: PlayerIndex, types: CardTyp
     if (!best || card.cost > getCard(best).cost) best = e.cardId;
   }
   return best;
+}
+
+type PlayPainParams = { minCost?: number; maxCost?: number; damage: number; duration?: number };
+
+/** Jogar uma carta com este custo impresso dói com este playPain? */
+export function playHurts(p: PlayPainParams, cost: number): boolean {
+  return cost >= (p.minCost ?? 0) && cost <= (p.maxCost ?? Infinity);
+}
+
+/** Doenças destes tipos que `player` tem, com duração e não permanentes (as que a Variante renova). */
+export function refreshable(state: GameState, player: PlayerIndex, types: CardType[]): ActiveEffect[] {
+  return state.players[player].effects.filter(
+    (e) => e.source !== player && e.duration !== null && types.includes(e.cardType) && !getCard(e.cardId).permanent,
+  );
 }
 
 /** A carta na posição `i` da mão do jogador vai para o fim da fila e entra a próxima (a mão tem sempre o mesmo tamanho). */
@@ -101,7 +117,7 @@ function overTime(apply: (ctx: MechanicContext, amount: number) => void): Mechan
 type InfectionParams = {
   /** Dano por segundo. */
   perSecond: number;
-  /** Dano total até acabar. Sem total, dura até ser curada. */
+  /** Dano total (real, já com multiplicadores como o da SIDA) até acabar. Sem total, dura até ser curada. */
   total?: number;
   /** Probabilidade (0–1), a cada `cureInterval` segundos, de a doença passar sozinha. */
   cureChance?: number;
@@ -146,8 +162,8 @@ export const MECHANICS = {
       if (p.total) n = Math.min(n, p.total - done);
       if (n > 0) {
         e.data.acc -= n;
-        e.data.done = done + n;
-        damage(state, target, n, cardType);
+        // Conta o dano real: com a SIDA o total chega mais depressa, mas não passa do limite.
+        e.data.done = done + damage(state, target, n, cardType);
       }
       if (p.total && (e.data.done ?? 0) >= p.total) {
         e.ended = true;
@@ -298,11 +314,41 @@ export const MECHANICS = {
     },
   }),
 
-  /** Esforço: cada carta de custo impresso `minCost` ou mais que o alvo jogue tira-lhe `damage` de vida. Sem `duration`, até ser curada. */
-  playPain: defineMechanic<{ minCost: number; damage: number; duration?: number }>({
+  /** Hipocondria: o próximo tratamento destes tipos que o alvo jogar não faz nada. Dura até ele jogar um. */
+  cancelNext: defineMechanic<{ types: CardType[] }>({
+    duration: () => null,
+    cancels: (p, type) => p.types.includes(type),
+  }),
+
+  /** Dormir: durante `duration` segundos o alvo não pode jogar nada; ao acordar ganha `energy` de energia. */
+  sleep: defineMechanic<{ duration: number; energy: number }>({
+    duration: (p) => p.duration,
+    lockedSlots: () => Array.from({ length: CONFIG.handSize }, (_, i) => i),
+    onExpire: ({ state, target }, p) => gainEnergy(state, target, p.energy),
+  }),
+
+  /** Variante: as doenças destes tipos que o alvo tem (com duração, não permanentes) voltam ao início, com a duração e o dano completos. */
+  refresh: defineMechanic<{ types: CardType[] }>({
+    requires: (state, source, p) => {
+      const target: PlayerIndex = source === 0 ? 1 : 0;
+      return refreshable(state, target, p.types).length ? null : 'O adversário não tem nenhum vírus para renovar.';
+    },
+    onApply: ({ state, target }, p) => {
+      for (const e of refreshable(state, target, p.types)) {
+        e.elapsed = 0;
+        e.data = {};
+      }
+    },
+  }),
+
+  /**
+   * Cada carta com custo impresso entre `minCost` e `maxCost` que o alvo jogue tira-lhe `damage` de vida.
+   * Hérnia: cartas caras (esforço); Tremores: cartas baratas (pressa). Sem `duration`, até ser curada.
+   */
+  playPain: defineMechanic<PlayPainParams>({
     duration: (p) => p.duration ?? null,
     onOwnerPlay: (p, _e, _type, { state, owner, cardId }) => {
-      if (getCard(cardId).cost >= p.minCost) damage(state, owner, p.damage);
+      if (playHurts(p, getCard(cardId).cost)) damage(state, owner, p.damage);
     },
   }),
 

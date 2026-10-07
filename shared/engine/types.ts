@@ -74,7 +74,9 @@ export type GameEvent =
   /** A doença que `player` jogou também o infetou a ele. */
   | { type: 'contagion'; player: PlayerIndex; cardId: string }
   /** `player` apanhou a doença `cardId` por acumulação (ex.: Obesidade ao 3.º Hambúrguer, `from`). */
-  | { type: 'gained'; player: PlayerIndex; cardId: string; from: string };
+  | { type: 'gained'; player: PlayerIndex; cardId: string; from: string }
+  /** A carta `cardId` que `player` jogou não fez nada por causa de `by` (ex.: Hipocondria). */
+  | { type: 'cancelled'; player: PlayerIndex; cardId: string; by: string };
 
 export interface GameState {
   /** Segundos de jogo. Negativo durante a contagem inicial. */

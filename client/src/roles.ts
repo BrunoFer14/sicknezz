@@ -23,6 +23,7 @@ export function cardRoles(id: string): Set<Role> {
       case 'finisher':
       case 'damageOverTime':
       case 'infection':
+      case 'refresh':
         roles.add('dano');
         break;
       case 'heal':
@@ -39,6 +40,7 @@ export function cardRoles(id: string): Set<Role> {
       case 'gainEnergyOverTime':
       case 'gainEnergy':
       case 'energyBurst':
+      case 'sleep':
         roles.add('energia');
         break;
       case 'statModifier': {

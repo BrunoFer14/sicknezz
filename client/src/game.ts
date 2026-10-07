@@ -540,6 +540,14 @@ export class GameScreen {
         this.log(view, e.cardId, mine(e.player) ? `Demasiado <b>${from}</b>: ficaste com <b>${name}</b>!` : `Demasiado <b>${from}</b>: o adversário ficou com <b>${name}</b>!`, 'info');
         break;
       }
+      case 'cancelled': {
+        sfx.blocked();
+        const name = escapeHtml(getCard(e.cardId).name);
+        const by = escapeHtml(getCard(e.by).name);
+        this.float(mine(e.player) ? this.hud.me : this.hud.opp, `${getCard(e.by).name}: não fez nada!`, 'info');
+        this.log(view, e.cardId, mine(e.player) ? `<b>${by}</b>: o teu <b>${name}</b> não fez nada` : `<b>${by}</b>: o <b>${name}</b> do adversário não fez nada`, 'info');
+        break;
+      }
       case 'surrender': {
         this.surrendered = e.player;
         this.log(view, null, mine(e.player) ? '<b>Tu</b> desististe' : `<b>${escapeHtml(view.opp.name)}</b> desistiu`, 'info');

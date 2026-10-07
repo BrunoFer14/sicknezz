@@ -16,6 +16,40 @@ const change = (name: string, before: string, after: string): NoteItem => ({ nam
 
 export const PATCH_NOTES: PatchNote[] = [
   {
+    version: '0.14',
+    date: '07/10/2026',
+    title: 'Sono e mutações',
+    sections: [
+      {
+        title: '🃏 Cartas novas',
+        items: [
+          '😨 Hipocondria (Mental, 3): o próximo tratamento do adversário não faz nada — gasta a energia e a carta. Dura até ele jogar um tratamento (até a Terapia e o Hospital são gastos por ela).',
+          '😱 Pesadelos (Sintoma, 1): só se o adversário tiver uma doença Mental. Tira 3 de vida por cada doença Mental dele.',
+          '😴 Dormir (Tratamento, 3): curas as doenças Mentais, mas durante 4s não podes jogar nada. Ao acordar ganhas 5 de energia.',
+          '🧬 Variante (Vírus, 4): só se o adversário tiver um vírus. Todos os vírus dele voltam ao início, com a duração e o dano completos (menos os permanentes).',
+          '🫨 Tremores (Estado, 2): durante 12s, cada carta de custo 2 ou menos que o adversário jogue tira-lhe 4 de vida. É a resposta a quem roda o baralho com cartas baratas — o contrário da Hérnia.',
+        ],
+      },
+      {
+        title: '☕ Café a mais tira o sono',
+        items: [
+          change('Café', 'ganhas 4 de energia em 6s', 'quem o bebe ganha 3 de energia em 6s e +1 ☕; ao 3.º ☕ fica com Insónia'),
+          'Tal como o Hambúrguer, podes largá-lo na tua área para beberes ou na do adversário para lhe dares — dar-lhe o 3.º café deixa-o com Insónia.',
+          'A Terapia, o Dormir e o Hospital curam a Insónia e também repõem o contador ☕.',
+        ],
+      },
+      {
+        title: '⚖️ Equilíbrio',
+        items: [
+          'Os baralhos de rampa de energia (Café + Bebida + Hambúrguer) ganhavam quase tudo: rodavam o baralho e ainda ficavam com mais energia. Agora cada um dá só +1 de energia líquida.',
+          change('Bebida Energética', 'ganhas 3 de energia', 'ganhas 2 de energia'),
+          change('Hambúrguer', 'quem o come ganha 4 de energia', 'quem o come ganha 3 de energia'),
+          change('Ébola', 'até 100 de dano (com a SIDA podia chegar a 200)', 'até 60 de dano, já a contar com a SIDA'),
+        ],
+      },
+    ],
+  },
+  {
     version: '0.13',
     date: '07/10/2026',
     title: 'Sem prisões de energia',

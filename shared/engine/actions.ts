@@ -4,8 +4,8 @@ import { CONFIG } from './config';
 import { computeStats } from './stats';
 import type { CardType, GameState, PlayerIndex, PlayerState } from './types';
 
-/** `type` é o tipo da carta que causa o dano (para aplicar multiplicadores como o da SIDA). */
-export function damage(state: GameState, target: PlayerIndex, amount: number, type?: CardType) {
+/** `type` é o tipo da carta que causa o dano (para aplicar multiplicadores como o da SIDA). Devolve o dano real. */
+export function damage(state: GameState, target: PlayerIndex, amount: number, type?: CardType): number {
   const p = state.players[target];
   const stats = computeStats(p);
   const mult = type === 'virus' ? stats.virusDamageTaken : type === 'bacteria' ? stats.bacteriaDamageTaken : 1;
@@ -16,9 +16,10 @@ export function damage(state: GameState, target: PlayerIndex, amount: number, ty
     p.damageCarry -= amount;
   }
   const real = Math.min(p.hp, amount);
-  if (real <= 0) return;
+  if (real <= 0) return 0;
   p.hp -= real;
   state.events.push({ type: 'damage', player: target, amount: real });
+  return real;
 }
 
 export function heal(state: GameState, target: PlayerIndex, amount: number) {

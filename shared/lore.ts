@@ -39,6 +39,10 @@ export const LORE: Partial<Record<CardId, CardLore>> = {
     what: 'Um espirro lança milhares de gotículas a vários metros de distância — é uma das principais formas de se passar uma gripe, uma constipação ou uma tuberculose a quem está perto. Quem espirra continua doente; só passou a doença a mais alguém.',
     history: 'Em 1942, fotografias de alta velocidade feitas nos Estados Unidos mostraram pela primeira vez a nuvem de gotículas de um espirro — e ajudaram a popularizar o conselho de espirrar para o cotovelo ou para um lenço.',
   },
+  variante: {
+    what: 'Quando um vírus se multiplica, comete pequenos erros a copiar o seu material genético — mutações. Uma variante é uma versão do vírus com mutações suficientes para se espalhar melhor ou escapar às defesas que o corpo já tinha.',
+    history: 'Durante a pandemia de Covid-19, a OMS passou a dar nomes de letras gregas às variantes (Alfa, Delta, Ómicron…), em vez de nomes de países, para evitar estigmatizar os locais onde foram detetadas.',
+  },
   sida: {
     what: 'A SIDA é a fase avançada da infeção pelo VIH, um vírus que ataca as defesas do corpo. Sem defesas, outras infeções tornam-se muito mais perigosas — é por isso que, no jogo, vírus e bactérias fazem o dobro do dano.',
     history: 'Os primeiros casos foram descritos em 1981 e o VIH foi descoberto em 1983 no Instituto Pasteur, em Paris (Prémio Nobel em 2008). Desde meados dos anos 1990, os antirretrovirais transformaram-na numa doença crónica controlável. O laço vermelho 🎗️ é o símbolo da luta contra a SIDA.',
@@ -113,6 +117,10 @@ export const LORE: Partial<Record<CardId, CardLore>> = {
     what: 'Acontece quando um órgão ou um disco da coluna sai do sítio e empurra os tecidos à volta. A hérnia discal, na coluna, é muitas vezes causada por levantar pesos com mau jeito — por isso, no jogo, cada esforço grande dói.',
     history: 'A cirurgia moderna da hérnia inguinal foi criada em 1887 pelo cirurgião italiano Edoardo Bassini, e a técnica dele continuou a ser usada durante quase um século.',
   },
+  tremores: {
+    what: 'Movimentos involuntários e repetidos, sobretudo nas mãos. Podem vir do nervosismo, de cafeína a mais, da falta de sono ou de doenças como a de Parkinson. Tudo o que se faz à pressa sai pior — no jogo, cada carta barata custa vida.',
+    history: 'Em 1817, o médico inglês James Parkinson descreveu a "paralisia agitante", com os seus tremores característicos. A doença ficou com o nome dele.',
+  },
   fadiga: {
     what: 'Cansaço intenso e persistente, que não passa com uma noite de sono. Pode vir de falta de descanso, de stress ou de uma doença, e faz com que qualquer tarefa pareça custar mais — no jogo, todas as cartas custam mais energia.',
     history: 'A "síndrome de fadiga crónica" só foi reconhecida como doença nos anos 1980. Durante muito tempo, quem sofria dela era acusado de preguiça, o que hoje se sabe estar errado.',
@@ -139,6 +147,10 @@ export const LORE: Partial<Record<CardId, CardLore>> = {
     what: 'Esgotamento causado por stress crónico no trabalho: exaustão, distanciamento e sensação de não conseguir dar conta do recado. No jogo, queima a energia que estava guardada.',
     history: 'O termo foi popularizado pelo psicólogo Herbert Freudenberger em 1974. Em 2019, a OMS incluiu-o na sua classificação internacional como um fenómeno ligado ao trabalho.',
   },
+  hipocondria: {
+    what: 'Medo persistente de ter uma doença grave, mesmo quando os exames dizem que está tudo bem. Hoje chama-se "perturbação de ansiedade de doença". Quem sofre dela muitas vezes sente que nenhum tratamento resolve — no jogo, o próximo tratamento não faz nada.',
+    history: 'Na Grécia Antiga, "hipocôndrio" era a zona da barriga por baixo das costelas, onde se achava que nascia a melancolia. Molière fez troça dela em 1673 na peça "O Doente Imaginário".',
+  },
   paranoia: {
     what: 'Desconfiança intensa e sem fundamento de que os outros nos querem prejudicar. Pode fazer parte de várias perturbações mentais. No jogo, deixa de conseguir ver o que se passa consigo.',
     history: 'A palavra vem do grego "para" (fora) e "nous" (mente) — literalmente, "fora da mente".',
@@ -161,6 +173,10 @@ export const LORE: Partial<Record<CardId, CardLore>> = {
     what: 'Reflexo que limpa as vias respiratórias de muco, poeiras ou micróbios. É um dos sintomas mais comuns de infeções respiratórias — quanto mais infeções, mais tosse.',
     history: 'A tosse convulsa, causada por uma bactéria, era uma das principais causas de morte infantil antes da vacina, introduzida nos anos 1940.',
   },
+  pesadelos: {
+    what: 'Sonhos assustadores que acordam a pessoa e deixam-na angustiada. São mais frequentes em quem passa por stress, ansiedade ou trauma — por isso, no jogo, doem mais quanto mais doenças mentais houver.',
+    history: 'A palavra inglesa "nightmare" vem de "mare", um espírito do folclore que se sentava no peito de quem dormia. O quadro "O Pesadelo" (1781), de Henry Fuseli, mostra exatamente essa criatura.',
+  },
   vomitos: {
     what: 'Forma de o corpo expulsar à força o que tem no estômago. Acontece muitas vezes com infeções como a gastroenterite ou intoxicações alimentares, e o maior perigo é a desidratação.',
     history: 'O soro de reidratação oral, uma simples mistura de água, sal e açúcar, foi testado em grande escala nos anos 1970 e já salvou milhões de vidas de crianças com vómitos e diarreia.',
@@ -179,12 +195,16 @@ export const LORE: Partial<Record<CardId, CardLore>> = {
     what: 'Tratamento com exercícios, movimento e técnicas manuais para recuperar de lesões, fraturas ou de um AVC, e para melhorar problemas como a falta de atividade física ou a obesidade.',
     history: 'Em 1813, o sueco Pehr Henrik Ling fundou em Estocolmo um instituto de ginástica médica, considerado um dos pontos de partida da fisioterapia moderna.',
   },
+  dormir: {
+    what: 'Durante o sono o corpo recupera energia e o cérebro arruma as memórias. Um adulto precisa de 7 a 9 horas por noite; dormir pouco piora o humor, a concentração e a saúde mental.',
+    history: 'Em 1953 descobriu-se o sono REM, a fase em que acontecem os sonhos mais vívidos. Desde então sabe-se que o sono não é "tempo desligado": é quando o cérebro trabalha em manutenção.',
+  },
   bebida: {
     what: 'Bebidas com muita cafeína e açúcar, que dão um pico rápido de energia. Uma de vez em quando não faz mal a um adulto, mas beber muitas pode causar palpitações, ansiedade e insónias — por isso, no jogo, cada bebida a mais custa-te vida.',
     history: 'A Red Bull foi lançada na Áustria em 1987, inspirada numa bebida tailandesa chamada Krating Daeng. A Autoridade Europeia para a Segurança dos Alimentos considera que até 400 mg de cafeína por dia são seguros para um adulto — cerca de cinco latas.',
   },
   cafe: {
-    what: 'O café contém cafeína, um estimulante que bloqueia no cérebro os sinais de cansaço (a adenosina). Dá energia durante umas horas — no jogo, literalmente.',
+    what: 'O café contém cafeína, um estimulante que bloqueia no cérebro os sinais de cansaço (a adenosina). Dá energia durante umas horas — no jogo, literalmente. Mas a cafeína fica 5 a 6 horas no corpo: café a mais tira o sono, e no jogo o 3.º café dá Insónia.',
     history: 'Conta a lenda que um pastor etíope chamado Kaldi descobriu o café ao ver as suas cabras muito agitadas depois de comerem os frutos de um arbusto.',
   },
   vitaminas: {

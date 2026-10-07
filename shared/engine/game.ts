@@ -130,6 +130,14 @@ export function playCard(state: GameState, player: PlayerIndex, handIndex: numbe
   p.effects = p.effects.filter((e) => !e.ended);
 
   state.events.push({ type: 'played', player, cardId, target: resolveTarget(player, card.target, side) });
+  // Hipocondria: a carta foi paga e gasta, mas não faz nada.
+  const cancel = p.effects.find((e) => getMechanic(e.mechanic).cancels?.(e.params, card.type));
+  if (cancel) {
+    p.effects = p.effects.filter((e) => e !== cancel);
+    state.events.push({ type: 'cancelled', player, cardId, by: cancel.cardId });
+    finalize(state);
+    return { ok: true };
+  }
   const playId = state.nextUid++;
   const blocked = new Set<PlayerIndex>();
   const replaced = new Set<PlayerIndex>();

@@ -2,7 +2,7 @@
 // as doenças ativas) e dá uma pontuação a cada carta; joga a melhor quando tiver energia para ela.
 import { getCard, validateDeck, type CardDef } from '../shared/cards';
 import { cardCost, lockedSlots, maxPlayableCost, other, unmetRequirement } from '../shared/engine/game';
-import { spreadable } from '../shared/engine/mechanics';
+import { getMechanic, playHurts, refreshable, spreadable } from '../shared/engine/mechanics';
 import { drainFactor } from '../shared/engine/actions';
 import { computeStats } from '../shared/engine/stats';
 import type { CardType, GameState, PlayerIndex, PlayerState, Side } from '../shared/engine/types';
@@ -143,7 +143,7 @@ export class Bot {
           value += this.dmg(opp, card.type, e.params.base + e.params.per * diseases(opp, this.me, e.params.types));
           break;
         case 'infection':
-          value += this.dmg(opp, card.type, e.params.total ? 29 : 20);
+          value += this.dmg(opp, card.type, e.params.total ? 25 : 20);
           break;
         case 'heal':
         case 'healOverTime':
@@ -176,8 +176,6 @@ export class Bot {
           break;
         }
         case 'gainEnergyOverTime':
-          value += me.energy < 6 ? e.params.amount * 2.5 : 1;
-          break;
         case 'gainEnergy':
           // Dar energia ao adversário é mau (a não ser que já esteja cheio).
           if (side === 'self') value += me.energy < 6 ? e.params.amount * 2.5 : 1;
@@ -218,7 +216,8 @@ export class Bot {
           value += opp.energy >= 4 ? 7 : 4;
           break;
         case 'playPain':
-          value += 6;
+          // Hérnia / Tremores: vale pelas cartas da mão do adversário que lhe vão doer.
+          value += opp.hand.filter((id) => playHurts(e.params, getCard(id).cost)).length * e.params.damage * 0.7 + 2;
           break;
         case 'forbidCards':
           value += opp.hand.some((id) => e.params.cards.includes(id)) ? 3 : 0.5;
@@ -235,14 +234,28 @@ export class Bot {
         case 'replaceRandom':
           value += 3;
           break;
+        case 'cancelNext':
+          value += 6;
+          break;
+        case 'refresh':
+          // Variante: vale o dano que os vírus já fizeram (e que voltam a fazer).
+          for (const x of refreshable(state, other(this.me), e.params.types))
+            if (x.mechanic === 'damageOverTime') value += this.dmg(opp, x.cardType, x.params.amount * Math.min(1, x.elapsed / x.params.duration));
+          break;
+        case 'sleep':
+          // Dormir: só compensa com pouca energia (senão a energia ao acordar perde-se).
+          value += me.energy < 3 ? e.params.energy * 1.5 : 0;
+          break;
         case 'shuffleHand':
           value += side === 'self' ? (this.handIsBad(state) ? 8 : 0) : 4;
           break;
       }
     }
     if (alreadyActive) value *= 0.15;
-    // Hérnia em mim: cartas pesadas custam vida.
-    for (const x of me.effects) if (x.mechanic === 'playPain' && card.cost >= x.params.minCost) value -= x.params.damage * 1.5;
+    // Hipocondria em mim: o próximo tratamento não faz nada (gastar um barato para a tirar ainda vale alguma coisa).
+    if (me.effects.some((x) => getMechanic(x.mechanic).cancels?.(x.params, card.type))) value = 4;
+    // Hérnia / Tremores em mim: estas cartas custam vida.
+    for (const x of me.effects) if (x.mechanic === 'playPain' && playHurts(x.params, card.cost)) value -= x.params.damage * 1.5;
     if (card.contagion) value *= 1 - card.contagion * 0.8;
     return value;
   }
