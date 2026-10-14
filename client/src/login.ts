@@ -1,4 +1,4 @@
-// Ecrã de entrada: é preciso iniciar sessão com a Google para jogar.
+// Ecrã de entrada: iniciar sessão com a Google ou jogar sem conta.
 import { escapeHtml } from './card';
 import { renderGoogleButton } from './google';
 
@@ -8,6 +8,7 @@ export class LoginScreen {
   constructor(
     private container: HTMLElement,
     private onCredential: (credential: string) => void,
+    private onGuest: () => void,
   ) {
     this.root.className = 'lobby login';
     this.showConnecting();
@@ -22,9 +23,12 @@ export class LoginScreen {
   show(clientId: string, error = '') {
     this.render(`
       <div class="google-btn"></div>
-      <p class="muted">Entra com a tua conta Google para jogar. O teu ranking, histórico e baralhos ficam guardados na conta, em qualquer dispositivo.</p>
+      <p class="muted">Com conta Google, o teu ranking, histórico e baralhos ficam guardados em qualquer dispositivo.</p>
       <p class="muted small">Guardamos só o teu primeiro nome e o identificador da conta — nunca o teu email.</p>
+      <button class="btn guest-btn">Jogar sem conta</button>
+      <p class="muted small">Sem conta, o progresso fica só neste browser.</p>
       <p class="error">${escapeHtml(error)}</p>`);
+    this.root.querySelector('.guest-btn')!.addEventListener('click', () => this.onGuest());
     const el = this.root.querySelector<HTMLElement>('.google-btn')!;
     renderGoogleButton(el, clientId, (c) => {
       this.render('<p class="muted login-wait">A entrar<span class="dots"></span></p>');

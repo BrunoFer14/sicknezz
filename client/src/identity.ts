@@ -48,6 +48,26 @@ export function setIdentity(profileId: string, secret: string) {
   save(profileId, secret);
 }
 
+const GUEST_KEY = 'sicknezz:guest';
+
+/** O jogador escolheu jogar sem conta (fica lembrado neste browser). */
+export function isGuest(): boolean {
+  try {
+    return localStorage.getItem(GUEST_KEY) === '1';
+  } catch {
+    return false;
+  }
+}
+
+export function setGuest(guest: boolean) {
+  try {
+    if (guest) localStorage.setItem(GUEST_KEY, '1');
+    else localStorage.removeItem(GUEST_KEY);
+  } catch {
+    /* ignorar */
+  }
+}
+
 /** Depois de terminar a sessão: volta a um perfil anónimo novo. */
 export function resetIdentity() {
   save(randomHex(16), randomHex(24));

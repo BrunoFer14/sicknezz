@@ -17,6 +17,9 @@ interface LobbyActions {
   openNotes(): void;
   /** Nome da conta Google (null sem sessão iniciada). */
   accountName(): string | null;
+  /** Login com Google disponível no servidor (para mostrar "Entrar" aos convidados). */
+  canLogin(): boolean;
+  login(): void;
   logout(): void;
 }
 
@@ -128,12 +131,15 @@ export class LobbyScreen {
     this.show();
   }
 
-  /** Conta com sessão iniciada. */
+  /** Conta com sessão iniciada, ou convidado com a opção de entrar. */
   private renderAccount() {
     const bar = this.root.querySelector<HTMLElement>('.account-bar')!;
     const name = this.actions.accountName();
-    bar.innerHTML = name ? `<span>👤 <b>${escapeHtml(name)}</b></span> <button class="link-btn" id="logout">Terminar sessão</button>` : '';
+    if (name) bar.innerHTML = `<span>👤 <b>${escapeHtml(name)}</b></span> <button class="link-btn" id="logout">Terminar sessão</button>`;
+    else if (this.actions.canLogin()) bar.innerHTML = `<span class="muted">👤 Sem conta</span> <button class="link-btn" id="login">Entrar com Google</button>`;
+    else bar.innerHTML = '';
     bar.querySelector('#logout')?.addEventListener('click', () => this.actions.logout());
+    bar.querySelector('#login')?.addEventListener('click', () => this.actions.login());
   }
 
   /** Painel dos baralhos: espaços 1–10 (clicar escolhe; vazio cria um novo) e o baralho ativo. */

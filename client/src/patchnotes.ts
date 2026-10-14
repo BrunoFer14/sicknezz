@@ -16,6 +16,21 @@ const change = (name: string, before: string, after: string): NoteItem => ({ nam
 
 export const PATCH_NOTES: PatchNote[] = [
   {
+    version: '0.16',
+    date: '14/10/2026',
+    title: 'Jogar sem conta',
+    sections: [
+      {
+        title: '🔓 Contas',
+        items: [
+          'Já se pode jogar sem conta: no ecrã de entrada há o botão "Jogar sem conta".',
+          'Sem conta, o perfil, o ranking e os baralhos ficam guardados só neste browser.',
+          'No menu, quem joga sem conta pode entrar com a Google a qualquer momento (numa conta nova, o progresso deste browser passa para ela).',
+        ],
+      },
+    ],
+  },
+  {
     version: '0.15',
     date: '07/10/2026',
     title: 'Controlo com dentes',

@@ -5,7 +5,7 @@ import { CardsScreen } from './cardpage';
 import { PatchNotesScreen } from './patchnotes';
 import { DeckBuilder } from './deckbuilder';
 import { GameScreen } from './game';
-import { identity, resetIdentity, setIdentity } from './identity';
+import { identity, isGuest, resetIdentity, setGuest, setIdentity } from './identity';
 import { LobbyScreen } from './lobby';
 import { LoginScreen } from './login';
 import { connect } from './net';
@@ -28,8 +28,8 @@ let accountName: string | null = null;
 /** Já chegou a primeira resposta do servidor (até lá mostra "a ligar"). */
 let welcomed = false;
 
-/** Com o login da Google configurado no servidor, é obrigatório ter sessão iniciada para jogar. */
-const needsLogin = () => !welcomed || (googleClientId !== null && !accountName);
+/** Com o login da Google configurado no servidor, mostra o ecrã de entrada a quem não tem sessão nem escolheu jogar sem conta. */
+const needsLogin = () => !welcomed || (googleClientId !== null && !accountName && !isGuest());
 
 // Com sessão iniciada, os baralhos ficam guardados na conta.
 onDecksChange((decks) => {
@@ -122,6 +122,11 @@ const lobby = new LobbyScreen(app, {
   openCards: () => navigate('/cartas'),
   openNotes: () => navigate('/patch-notes'),
   accountName: () => accountName,
+  canLogin: () => googleClientId !== null,
+  login: () => {
+    setGuest(false);
+    toMenu(); // mostra o ecrã de entrada com o botão da Google
+  },
   logout: () => {
     net.send({ t: 'logout' });
     resetIdentity();
@@ -129,7 +134,14 @@ const lobby = new LobbyScreen(app, {
   },
 });
 lobby.hide();
-const login = new LoginScreen(app, (credential) => net.send({ t: 'login', credential }));
+const login = new LoginScreen(
+  app,
+  (credential) => net.send({ t: 'login', credential }),
+  () => {
+    setGuest(true);
+    toMenu();
+  },
+);
 
 installPreview();
 queueMicrotask(route); // abre logo /cartas se for esse o endereço
@@ -202,6 +214,7 @@ function onMessage(msg: ServerMsg) {
   switch (msg.t) {
     case 'account':
       setIdentity(msg.profileId, msg.secret);
+      setGuest(false);
       applyAccount(msg.account);
       if (screen === 'login' || screen === 'menu') toMenu();
       break;
